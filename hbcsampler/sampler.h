@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include "frames.h"
 
 
 using namespace std;
@@ -29,6 +30,10 @@ public:
     
     bool sampleAll(string outputDir, unsigned int iters);
 
+    void printFrames(void);
+
+    void printRoles(void);
+
     ~Sampler_t();
 
 private:
@@ -45,6 +50,8 @@ private:
 
     double** post_phi;
     double** post_theta;
+
+    Frames_t *frameSet;
   
     vector<vector<vector<unsigned int> > > w;//inputData;
     vector<unsigned int> fc_f;
