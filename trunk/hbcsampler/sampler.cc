@@ -18,8 +18,6 @@
 #include "samplib.h"
 #include "stats.h"
 
-using namespace std;
-
 void Sampler_t::resample_post_phi(void) {
     double* tmp = (double*) malloc(sizeof(double) * (F + 1));
     for (unsigned int u = 1; u <= U; ++u) {
@@ -95,6 +93,7 @@ void Sampler_t::resample_frames(void) {
             #pragma omp critical
             fc_f[frames[u-1][t-1]-1]--;
 
+            #pragma omp critical
             frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
 
             for (unsigned int s=1; s<=S; ++s) {
@@ -131,6 +130,8 @@ void Sampler_t::resample_roles(void) {
     #pragma omp parallel for schedule(dynamic)
     for (int f = 1; f <= (signed int) F; ++f) {
         double* post_roles = (double*) malloc(sizeof(double) * (R + 1));
+        
+
         for (unsigned int s = 1; s <= S; ++s) {
 
             #pragma omp critical
@@ -141,10 +142,11 @@ void Sampler_t::resample_roles(void) {
             }
 
             post_roles[R] = 0.0;
-
+            
             for (unsigned int r = 1; r <= R; ++r) {
                 double prod = 0.0;
                 post_roles[r-1] = 0.0;
+
                 for (unsigned int u = 1; u <= U; ++u) {
                     for (unsigned int t=1; t <= w[u-1].size(); ++t) {
                         if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
@@ -157,10 +159,14 @@ void Sampler_t::resample_roles(void) {
                     }
                 }
                 post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
+
+
             }
 
             normalizeLog(post_roles, 1, R);
+            #pragma omp critical
             roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
+            
 
             #pragma omp critical
             post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
@@ -193,9 +199,13 @@ void Sampler_t::initialize_frames(void) {
 
 void Sampler_t::initialize_roles(void) {
     for (unsigned int f=1; f<=F; ++f) {
-        for (unsigned int s=1; s<=S; ++s) {
-            roles[f-1][s-1] = sample_MultSym(1, R);
-        }
+        do {
+            for (unsigned int s=1; s<=S; ++s) {
+                roles[f-1][s-1] = sample_MultSym(1, R);
+            } 
+        } while (frameSet->inside(frameSet->makeKey(roles[f-1])));
+        FrameKey_t fk = frameSet->makeKey(roles[f-1]);
+        frameSet->insert(fk);
         roles[f-1][S] = 0;
     }
 }
@@ -280,6 +290,8 @@ bool Sampler_t::loadData(string inputFileName) {
         return false;
     }
 
+    frameSet = new Frames_t(S, R);
+
     cout << "F = " << F << endl;
     cout << "R = " << R << endl;
     cout << "alpha = " << alpha << endl;
@@ -351,7 +363,10 @@ Sampler_t::~Sampler_t() {
             free(frames[malloc_dim_1-1]);
         }
         free(frames);
+
+        delete frameSet;
     }
+
 }
 
 
@@ -517,5 +532,27 @@ bool Sampler_t::dumpBest(string outputDir) {
         delete fsamples.at(i);
     }
     return true;
+}
+
+void Sampler_t::printFrames(void) {
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t<=w[u-1].size(); ++t) {
+            cout << frames[u-1][t-1];
+            if (t != w[u-1].size()) cout << " ";
+        }
+        if (u != U) cout << endl;
+    }
+}
+
+
+
+void Sampler_t::printRoles(void) {
+    for (unsigned int f=1; f<=F; ++f) {
+        for (unsigned int s=1; s<=S; ++s) {
+            cout << roles[f-1][s-1];
+            if (s != S) cout << " ";
+        }
+        if (f != F) cout << endl;
+    }
 }
 

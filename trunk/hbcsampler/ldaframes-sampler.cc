@@ -114,6 +114,12 @@ int main(int argc, char **argv) {
     sampler.initialize();
     cout << "Sampling..." << endl;
     sampler.sampleAll(outputDirectoryName, iters);
+    
+    sampler.printFrames();
+    cout << endl << endl;
+    sampler.printRoles();
+    cout << endl;
+    
     //cout << "Selecting the best sample..." << endl;
     //sampler.dumpBest(outputDirectoryName);
 
