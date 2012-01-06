@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
+#include <limits>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -67,9 +68,7 @@ void Sampler_t::resample_frames(void) {
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
 
             for (unsigned int s = 1; s <= S; ++s) {
-                #pragma omp critical
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
-                #pragma omp critical
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
             }
             post_phi[u-1][F] -= 1.0;
@@ -86,30 +85,28 @@ void Sampler_t::resample_frames(void) {
             }
 
             normalizeLog(post_frames, 1, F);
-            for (unsigned int s=1; s<=S; ++s) {
-                #pragma omp critical
-                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+            #pragma omp critical 
+            {
+                for (unsigned int s=1; s<=S; ++s) {
+                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+                }
+                fc_f[frames[u-1][t-1]-1]--;
             }
-            #pragma omp critical
-            fc_f[frames[u-1][t-1]-1]--;
 
-            #pragma omp critical
             frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
 
-            for (unsigned int s=1; s<=S; ++s) {
-                #pragma omp critical
-                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+            #pragma omp critical 
+            {
+                for (unsigned int s=1; s<=S; ++s) {
+                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                }
+                fc_f[frames[u-1][t-1]-1]++;
             }
-            #pragma omp critical
-            fc_f[frames[u-1][t-1]-1]++;
-
 
             post_phi[u-1][F] += 1.0;
             post_phi[u-1][frames[u-1][t-1]-1] += 1.0;
             for (unsigned int s = 1; s<=S; ++s) {
-                #pragma omp critical
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
-                #pragma omp critical
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
             }
         }
@@ -133,49 +130,57 @@ void Sampler_t::resample_roles(void) {
         
 
         for (unsigned int s = 1; s <= S; ++s) {
-
-            #pragma omp critical
             post_theta[roles[f-1][s-1]-1][V] -= fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
-                #pragma omp critical
                 post_theta[roles[f-1][s-1]-1][v-1] -= fc_fsw[f-1][s-1][v-1];
             }
 
             post_roles[R] = 0.0;
+           
+            FrameKey_t oldFrame; 
+            #pragma omp critical
+            oldFrame = frameSet->makeKey(roles[f-1]);
             
             for (unsigned int r = 1; r <= R; ++r) {
                 double prod = 0.0;
-                post_roles[r-1] = 0.0;
-
-                for (unsigned int u = 1; u <= U; ++u) {
-                    for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-                        if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
-                    }
+                post_roles[r-1] = -1 * numeric_limits<double>::max(); //zero probability
+                FrameKey_t newFrame;
+                bool inside;
+                #pragma omp critical
+                {
+                    newFrame = frameSet->makeKey(roles[f-1], s, r);
+                    inside = frameSet->inside(newFrame);
                 }
+
+                if (newFrame == oldFrame || !inside) {
+                    for (unsigned int u = 1; u <= U; ++u) {
+                        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
+                            if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
+                        }
+                    }
                 
-                for (unsigned int v = 1; v<=V; ++v) {
-                    for (unsigned int i = 0; i < fc_fsw[f-1][s-1][v-1]; ++i) {
-                        prod += ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
+                    for (unsigned int v = 1; v<=V; ++v) {
+                        for (unsigned int i = 0; i < fc_fsw[f-1][s-1][v-1]; ++i) {
+                            prod += ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
+                        }
                     }
+                    post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
                 }
-                post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
+            }
+            
+            normalizeLog(post_roles, 1, R);
 
-
+            #pragma omp critical 
+            {
+                roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
+                frameSet->remove(oldFrame);
+                frameSet->insert(frameSet->makeKey(roles[f-1]));
             }
 
-            normalizeLog(post_roles, 1, R);
-            #pragma omp critical
-            roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
-            
-
-            #pragma omp critical
             post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
-                #pragma omp critical
                 post_theta[roles[f-1][s-1]-1][v-1] += fc_fsw[f-1][s-1][v-1];
             }
-
-
         }
         free(post_roles);
     }
