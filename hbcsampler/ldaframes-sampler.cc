@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
     unsigned int iters = 100;
     float alpha = 0.1;
     float beta = 0.1;
+    bool printResult = false;
     
     po::options_description desc("Allowed options");
 
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
         ("iters,I", po::value<unsigned int>(), "iterations")
         ("alpha", po::value<float>(), "alpha")
         ("beta", po::value<float>(), "beta")
+        ("print,P", "print resulting frames and roles")
     ;
 
     po::positional_options_description p;
@@ -58,6 +60,10 @@ int main(int argc, char **argv) {
     if (vm.count("help")) {
         outputUsage(desc, argv[0]);
         return 1;
+    }
+
+    if (vm.count("print")) {
+        printResult = true;
     }
 
     if (vm.count("input-file"))
@@ -115,10 +121,12 @@ int main(int argc, char **argv) {
     cout << "Sampling..." << endl;
     sampler.sampleAll(outputDirectoryName, iters);
     
-    sampler.printFrames();
-    cout << endl << endl;
-    sampler.printRoles();
-    cout << endl;
+    if (printResult) {
+        sampler.printFrames();
+        cout << endl << endl;
+        sampler.printRoles();
+        cout << endl;
+    }
     
     //cout << "Selecting the best sample..." << endl;
     //sampler.dumpBest(outputDirectoryName);
