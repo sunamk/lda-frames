@@ -182,7 +182,8 @@ class StanfordCoreNLP(object):
                 # the second argument is a forced delay (in seconds)
                 # EVERY parse must incur.  
                 # TODO make this as small as possible.
-                ch = self._server.read_nonblocking (4000, 0.3)
+                #ch = self._server.read_nonblocking (4000, 0.3)
+                ch = self._server.read_nonblocking (4000, 0.01)
             except pexpect.TIMEOUT:
                 break
         try:
@@ -238,11 +239,18 @@ class StanfordCoreNLP(object):
         reads in the result, parses the results and returns a list
         with one dictionary entry for each parsed sentence, in JSON format.
         """
-        # convert to JSON and return
-        if verbose: print "Request", text
-        results = self._parse(text, verbose)
-        if verbose: print "Results", results
-        return dumps(results)
+        try:
+            # convert to JSON and return
+            if verbose: print "Request", text
+            results = self._parse(text, verbose)
+            if verbose: print "Results", results
+            return dumps(results)
+        except pexpect.EOF:
+            print "Stanford coreNLP has died. Starting a new instance."
+            self.__init__()
+            return dumps([])
+        except:
+            print sys.exc_info()
 
     def parse_imperative(self, text, verbose=True):
         """

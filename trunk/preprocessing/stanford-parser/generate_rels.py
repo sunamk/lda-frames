@@ -7,7 +7,7 @@ to be a plain text with one sentence per line. All xml tags will be ingnored.
 USAGE: generate_rels.py NUMBER_OF_CORES STARTING_PORT_NUMBER INPUT_FILE
     -h, --help            Print this help.
     -m, --method m        Use method of selecting frame realizations m. The default
-                          method is "subjobj".
+                          method is "allrels".
     -s, --starting_line s Start the parsing from line #s. This serves for recovering reasons.
                           When this option is set, the output data is appended to the output 
                           file instead of replacing it.
@@ -23,6 +23,7 @@ import getopt
 import jsonrpc
 import methods
 import threading
+import time
 from Queue import Queue
 from simplejson import loads
 
@@ -42,18 +43,24 @@ class Client(threading.Thread):
     def run(self):
         try:
             self.result = loads(self.server.parse(self.sentence, False))
+            if self.result == []:
+                sys.stderr.write("Empty result. Waiting 10 seconds.\n")
+                time.sleep(10)
+                self.run()
+    
         except jsonrpc.RPCTransportError, msg:
             if str(msg) == "timed out":
-                sys.stderr.write(str(msg) + ". Ignoring line:\n%s\n" % self.sentence)
+                sys.stderr.write(str(msg) + ". Ignoring line.\n")
                 self.result = None
             else:
                 sys.stderr.write("Transport error. " + str(msg) + "\n")
                 
         except jsonrpc.RPCInternalError, msg:
-            sys.stderr.write(str(msg) + ". Ignoring line:\n%s\n" % self.sentence)
-            self.result = None
+            sys.stderr.write(str(msg))
+            self.result = False
+
         except jsonrpc.RPCParseError, msg:
-            sys.stderr.write(str(msg) + ". Ignoring line:\n%s\n" % self.sentence)
+            sys.stderr.write(str(msg) + ". Ignoring line.\n")
             self.result = None
         
 
@@ -148,7 +155,7 @@ if __name__ == "__main__":
     starting_line = 0
     output_file = ""
     host_name = "127.0.0.1"
-    method = methods.subjobj
+    method = methods.allrels
     
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hm:s:d:n:", ["help", "method",
