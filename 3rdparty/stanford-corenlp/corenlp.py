@@ -146,7 +146,7 @@ class StanfordCoreNLP(object):
                 sys.exit(1)
         
         # spawn the server
-        self._server = pexpect.spawn("%s -Xmx1g -cp %s %s %s" % (java_path, ':'.join(jars), classname, annotators))
+        self._server = pexpect.spawn("%s -Xmx3g -cp %s %s %s" % (java_path, ':'.join(jars), classname, annotators))
         
         print "Starting the Stanford Core NLP parser."
         self.state = "plays hard to get, smiles from time to time"
@@ -247,6 +247,8 @@ class StanfordCoreNLP(object):
             return dumps(results)
         except pexpect.EOF:
             print "Stanford coreNLP has died. Starting a new instance."
+            self._server.kill(9)
+            time.sleep(1)
             self.__init__()
             return dumps([])
         except:

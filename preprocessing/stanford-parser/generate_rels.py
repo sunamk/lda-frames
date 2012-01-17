@@ -33,6 +33,7 @@ class Client(threading.Thread):
         self.server = server
         self.result = False
         threading.Thread.__init__(self)
+        self.trials = 1
 
     def getResult(self):
         return self.result
@@ -44,16 +45,28 @@ class Client(threading.Thread):
         try:
             self.result = loads(self.server.parse(self.sentence, False))
             if self.result == []:
-                sys.stderr.write("Empty result. Waiting 10 seconds.\n")
-                time.sleep(10)
-                self.run()
+                if self.trials <= 3:
+                    sys.stderr.write("Empty result (trial #%d). Waiting 5 seconds.\n" % self.trials)
+                    time.sleep(5)
+                    self.trials += 1
+                    self.run()
+                else:
+                    sys.stderr.write("Trial #%d. Ignoring line.\n" % self.trials)
+                    self.result = None
     
         except jsonrpc.RPCTransportError, msg:
             if str(msg) == "timed out":
-                sys.stderr.write(str(msg) + ". Ignoring line.\n")
-                self.result = None
+                if self.trials <= 3:
+                    sys.stderr.write("Timed out (trial #%d). Waiting 5 seconds.\n" % self.trials)
+                    time.sleep(5)
+                    self.trials += 1
+                    self.run()
+                else:
+                    sys.stderr.write("Trial #%d. Ignoring line.\n" % self.trials)
+                    self.result = None
             else:
                 sys.stderr.write("Transport error. " + str(msg) + "\n")
+                self.result = None
                 
         except jsonrpc.RPCInternalError, msg:
             sys.stderr.write(str(msg))
@@ -155,7 +168,7 @@ if __name__ == "__main__":
     starting_line = 0
     output_file = ""
     host_name = "127.0.0.1"
-    method = methods.allrels
+    method = methods.parserstruct
     
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hm:s:d:n:", ["help", "method",
