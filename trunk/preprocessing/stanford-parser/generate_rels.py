@@ -57,8 +57,8 @@ class Client(threading.Thread):
         except jsonrpc.RPCTransportError, msg:
             if str(msg) == "timed out":
                 if self.trials <= 3:
-                    sys.stderr.write("Timed out (trial #%d). Waiting 5 seconds.\n" % self.trials)
-                    time.sleep(5)
+                    sys.stderr.write("Timed out (trial #%d). Waiting 1 second.\n" % self.trials)
+                    time.sleep(1)
                     self.trials += 1
                     self.run()
                 else:
@@ -66,7 +66,7 @@ class Client(threading.Thread):
                     self.result = None
             else:
                 sys.stderr.write("Transport error. " + str(msg) + "\n")
-                self.result = None
+                self.result = False
                 
         except jsonrpc.RPCInternalError, msg:
             sys.stderr.write(str(msg))
