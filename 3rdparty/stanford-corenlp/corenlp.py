@@ -124,7 +124,7 @@ class StanfordCoreNLP(object):
         Spawns the server as a process.
         """
 
-        jars = ["stanford-corenlp-2012-01-06.jar", 
+        jars = ["stanford-corenlp-2012-01-08.jar", 
                 "stanford-corenlp-2011-12-27-models.jar",
                 "joda-time.jar",
                 "xom.jar"]
@@ -146,7 +146,7 @@ class StanfordCoreNLP(object):
                 sys.exit(1)
         
         # spawn the server
-        self._server = pexpect.spawn("%s -Xmx3g -cp %s %s %s" % (java_path, ':'.join(jars), classname, annotators))
+        self._server = pexpect.spawn("%s -Xmx30g -cp %s %s %s" % (java_path, ':'.join(jars), classname, annotators))
         
         print "Starting the Stanford Core NLP parser."
         self.state = "plays hard to get, smiles from time to time"

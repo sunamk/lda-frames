@@ -1,5 +1,5 @@
 """Definitions of supported methods for selecting frame realizations"""
-
+import sys
 
 def get_id(word):
     """Returns the numeric suffix from the parsed recognized words"""
@@ -26,13 +26,25 @@ def subjobj(parseResult):
     """Generates SUBJECT -- OBJECT grammatical relations."""
     result = []
     for sentence in parseResult:
-        lemmas = sentence["lemmas"]
+        lemmas = None
+        deps = None
+        try:
+            lemmas = sentence["lemmas"]
+            deps = sentence["deps"]
+        except TypeError:
+            sys.stderr.write("Bad input. Ignoring line.\n")
+            continue
+        except KeyError:
+            sys.stderr.write("Bad input. Ignoring line.\n")
+            continue
         rels = {}
-        for dep in sentence["deps"]:
+        for dep in deps:
             l2 = ""
             try:
                 l2 = lemmas[get_id(dep[2]) - 1]
             except ValueError:
+                continue
+            except IndexError:
                 continue
 
             if dep[0] == "agent" or dep[0] == "nsubj" or dep[0] == "nsubjpass" or \
@@ -66,6 +78,8 @@ def subjobj(parseResult):
                 result.append((normalize(lemmas[get_id(k) - 1]), normalize(v[0]), 
                     normalize(v[1])))
             except ValueError:
+                continue
+            except IndexError:
                 continue
     return result
         
