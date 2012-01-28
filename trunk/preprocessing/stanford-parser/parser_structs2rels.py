@@ -26,6 +26,6 @@ for l in sys.stdin.xreadlines():
         continue
     for r in results:
         a = "\t".join(r)
-        print a.encode("utf-8")
+        print a
 sys.exit(0)
 

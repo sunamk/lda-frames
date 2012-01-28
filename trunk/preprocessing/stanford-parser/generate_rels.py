@@ -4,7 +4,7 @@
 from a plain text corpus using the Stanford parser. The input file is assumed
 to be a plain text with one sentence per line. All xml tags will be ingnored.
 
-USAGE: generate_rels.py NUMBER_OF_CORES STARTING_PORT_NUMBER INPUT_FILE
+USAGE: generate_rels.py NUMBER_OF_CORES INPUT_FILE
     -h, --help            Print this help.
     -m, --method m        Use method of selecting frame realizations m. The default
                           method is "allrels".
@@ -13,27 +13,89 @@ USAGE: generate_rels.py NUMBER_OF_CORES STARTING_PORT_NUMBER INPUT_FILE
                           file instead of replacing it.
     -o, --output_file o   Use output file o. Default is the same as the input with ".rel" 
                           suffix.
-    -n, --host_name n     Connect to host n. Defaut is "127.0.0.1".
+    -n, --corenlp n       Path to CoreNLP directory. Default is 
+                          "../../3rdparty/stanford-corenlp/".
+    -x, --max_memory x    Maximum amount of memory for each core in gigabytes. Default is 3. 
 """
 
 
 import sys
+import re
 import signal
 import getopt
-import jsonrpc
 import methods
 import threading
-import time
+import subprocess
 from Queue import Queue
-from simplejson import loads
+
+class Worker:
+    def __init__(self, args):
+        self.server = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.stdin = self.server.stdin
+        self.stdout = self.server.stdout
+
+    def parse(self, sentence):
+        try:
+            self.stdin.write(sentence + "\n")
+        except IOError:
+            return False
+        state = 0
+        sentence = {"deps":[], "lemmas":[]}
+
+        while(True):
+            line = self.stdout.readline()
+            if line == "":
+                return False
+            if line.startswith("NLP"):
+                state = 1
+                continue
+            if state == 1:
+                sentence["text"] = line.strip()
+                state = 2
+                continue
+            if line.startswith("[Text="):                
+                exp = re.compile('\[([^\]]+)\]')
+                matches  = exp.findall(line)
+                for s in matches:
+                    av = re.split("=| ", s)
+                    word = av[1] 
+                    lemma = ""
+                    attributes = {}
+                    for a,v in zip(*[av[2:][x::2] for x in (0, 1)]):
+                        if a == "Lemma":
+                            lemma = v
+                            break   
+                    sentence['lemmas'].append(lemma)
+            if line.startswith("(ROOT"):
+                state = 3
+                continue
+            if line.strip() == "" and state == 3:
+                state = 4
+                continue
+
+            if line.strip() != "" and state == 4:
+                line = line.rstrip()
+                split_entry = re.split("\(|, ", line[:-1])
+                if len(split_entry) == 3:
+                    rel, left, right = map(lambda x: x, split_entry)
+                    sentence['deps'].append([rel,left,right])
+    
+            if line.strip() == "" and state == 4:
+                return [sentence]
+        
+    def stop(self):
+        self.server.kill()
+        self.server.wait()
+
+    def __del__(self):
+        self.stop()
 
 class Client(threading.Thread):
     def __init__(self, sentence, server):
-        self.sentence = unicode(sentence, "utf-8")
+        self.sentence = sentence
         self.server = server
         self.result = False
         threading.Thread.__init__(self)
-        self.trials = 1
 
     def getResult(self):
         return self.result
@@ -42,57 +104,21 @@ class Client(threading.Thread):
         return self.server
 
     def run(self):
-        try:
-            self.result = loads(self.server.parse(self.sentence, False))
-            if self.result == []:
-                if self.trials <= 3:
-                    sys.stderr.write("Empty result (trial #%d). Waiting 5 seconds.\n" % self.trials)
-                    time.sleep(5)
-                    self.trials += 1
-                    self.run()
-                else:
-                    sys.stderr.write("Trial #%d. Ignoring line.\n" % self.trials)
-                    self.result = None
-    
-        except jsonrpc.RPCTransportError, msg:
-            if str(msg) == "timed out":
-                if self.trials <= 3:
-                    sys.stderr.write("Timed out (trial #%d). Waiting 1 second.\n" % self.trials)
-                    time.sleep(1)
-                    self.trials += 1
-                    self.run()
-                else:
-                    sys.stderr.write("Trial #%d. Ignoring line.\n" % self.trials)
-                    self.result = None
-            else:
-                sys.stderr.write("Transport error. " + str(msg) + "\n")
-                self.result = False
-                
-        except jsonrpc.RPCInternalError, msg:
-            sys.stderr.write(str(msg))
-            self.result = False
-
-        except jsonrpc.RPCParseError, msg:
-            sys.stderr.write(str(msg) + ". Ignoring line.\n")
-            self.result = None
-        
+        self.result = self.server.parse(self.sentence)
 
 
 class Generator:
-    def __init__(self, cores, starting_port, host_name):
-        self.starting_port = starting_port
+    def __init__(self, cores, args):
         self.cores = cores
-        self.host_name = host_name
         self.servers = Queue()
         self.processedLines = 0
         self.processedSentences = 0
-        self.finished = False
         self.threads = Queue()
+        self.finished = False
         self.exit = False
 
-        for p in range(self.starting_port, self.starting_port + self.cores):
-            self.servers.put(jsonrpc.ServerProxy(jsonrpc.JsonRpc20(),
-                jsonrpc.TransportTcpIp(addr=(self.host_name, p))))
+        for s in range(self.cores):
+            self.servers.put(Worker(args))
 
     def producer(self, inputFileName, startingLine):
         inputFile = open(inputFileName, "r")
@@ -113,9 +139,11 @@ class Generator:
             if self.processedLines % (self.cores*10) == 0:
                 sys.stderr.write("Processed lines: %d.\n" % self.processedLines)
             self.processedSentences += 1
-        
+
         inputFile.close()
         self.finished = True
+        sys.stderr.write("Producer: exiting.\n")
+
 
     def consumer(self, outputFileName, startingLine, method):
         outputFile = None
@@ -125,18 +153,16 @@ class Generator:
             outputFile = open(outputFileName, "w")
         else:
             outputFile = open(outputFileName, "a")
-        
+
         while not self.exit and (not self.finished or \
                 writtenSentences < self.processedSentences):
-            
+
             thread = self.threads.get(True)
             thread.join()
             result = thread.getResult()
             server = thread.getServer()
-            self.servers.put(server, True) 
+            self.servers.put(server, True)
             tuples = method(result)
-            if result == None:
-                continue
             if result == False or tuples == False:
                 self.exit = True
                 print "Last processed line: %d." % self.processedLines
@@ -145,13 +171,15 @@ class Generator:
             writtenSentences += 1
 
         outputFile.close()
-    
+        sys.stderr.write("Consumer: exiting.\n")
+
     def signalHandler(self, signum, frame):
         print "Last processed line: %d." % self.processedLines
         self.exit = True
 
+
     def run(self, inputFileName, outputFileName, method, startingLine = 0):
-        self.cons_thread = threading.Thread(target=self.consumer, 
+        self.cons_thread = threading.Thread(target=self.consumer,
                 args=(outputFileName, startingLine, method))
         self.cons_thread.start()
 
@@ -160,19 +188,20 @@ class Generator:
 
         self.cons_thread.join()
 
+
 if __name__ == "__main__":
 
     cores = 0
-    starting_port = 0
     input_file = ""
     starting_line = 0
     output_file = ""
-    host_name = "127.0.0.1"
+    corenlp = "../../3rdparty/stanford-corenlp/"
+    max_memory = 3
     method = methods.parserstruct
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hm:s:d:n:", ["help", "method",
-            "starting_line", "output_dir", "--host_name"])
+        opts, args = getopt.getopt(sys.argv[1:], "hm:s:d:c:x:", ["help", "method",
+            "starting_line", "output_dir", "corenlp", "max_memory"])
     except getopt.error, msg:
         print msg
         print "for help use --help"
@@ -192,26 +221,39 @@ if __name__ == "__main__":
             starting_line = int(a)
         if o in ("-o", "--output_file"):
             output_file = a
-        if o in ("-n", "--host_name"):
-            host_name = a
-    if len(args) != 3:
+        if o in ("-c", "--corenlp"):
+            corenlp = a
+        if o in ("-x", "--max_memory"):
+            max_memory = int(a)
+
+
+    if len(args) != 2:
         print "Wrong number of parameters."
         print "for help use --help"
         sys.exit(1)
     cores = int(args[0])
-    starting_port = int(args[1])
-    input_file = args[2]
+    input_file = args[1]
 
     if output_file == "": output_file = input_file + ".rel"
 
-    #print "Cores: ", cores
-    #print "Staring port: ", starting_port
-    #print "Input file: ", input_file
-    #print "Starting line: ", starting_line
-    #print "Output dir: ", output_dir
-    #print "Host name: ", host_name
+    if not corenlp.endswith("/"):
+        corenlp += "/"    
 
-    generator = Generator(cores, starting_port, host_name)
+    jars = ":".join([
+        corenlp + "stanford-corenlp-2012-01-08.jar",
+        corenlp + "stanford-corenlp-2011-12-27-models.jar",
+        corenlp + "xom.jar",
+        corenlp + "joda-time.jar"
+    ])
+
+    args = ["/usr/bin/java",
+            "-cp", 
+            jars, 
+            "-Xmx%dg" % max_memory, 
+            "edu.stanford.nlp.pipeline.StanfordCoreNLP",
+            "-annotators",  "tokenize,ssplit,pos,lemma,parse"]
+
+    generator = Generator(cores, args)
     generator.run(input_file, output_file, method, starting_line)
     sys.exit(0)
 
