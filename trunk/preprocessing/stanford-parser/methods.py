@@ -5,8 +5,12 @@ def get_id(word):
     """Returns the numeric suffix from the parsed recognized words"""
     return int(word[word.rindex("-")+1:])
 
-def parserstruct(parseResult):
+def parserstruct(parseResult, desc=False):
     """Prints just the parser result."""
+
+    if desc == True:
+        return ";ALL PARSER STRUCTURES"
+
     res = str(parseResult) + "\n"
     return res
 
@@ -21,9 +25,11 @@ def normalize(word):
     except ValueError:
         return result
 
-
-def subjobj(parseResult):
+def subjobj(parseResult, desc=False):
     """Generates SUBJECT -- OBJECT grammatical relations."""
+    if desc == True:
+        return ";SUBJECT\tOBJECT"
+
     result = []
     for sentence in parseResult:
         lemmas = None
