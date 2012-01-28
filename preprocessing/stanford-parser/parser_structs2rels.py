@@ -2,20 +2,28 @@
 
 """Transform resulting structures of Stanford parser to a specified relation format.
 
-USAGE: cat parse_structs.txt | parser_structs2rels.py subjobj >  subjobj.rel
+USAGE: ./parser_structs2rels.py parse_structs.prs subjobj >  subjobj.rel
 
 """
 
 import sys
 import methods
 
-if len(sys.argv) != 2:
+if len(sys.argv) != 3:
     sys.stderr.write(__doc__)
     sys.exit(1)
 
-method = getattr(methods, sys.argv[1])
+method = getattr(methods, sys.argv[2])
 progress = 0
-for l in sys.stdin.xreadlines():
+
+f = open(sys.argv[1])
+head = f.readline().strip()
+if not head == ";ALL PARSER STRUCTURES":
+    sys.stderr.write("Input data is not valid.\n")
+    sys.exit(1)
+print method(None, desc=True)
+    
+for l in f.xreadlines():
     progress += 1
     if progress % 10000 == 0:
         sys.stderr.write("Progress at line #%d.\n" % progress)

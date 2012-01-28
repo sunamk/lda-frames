@@ -151,8 +151,10 @@ class Generator:
 
         if startingLine == 0:
             outputFile = open(outputFileName, "w")
+            outputFile.write(method(None, desc = True) + "\n")
         else:
             outputFile = open(outputFileName, "a")
+
 
         while not self.exit and (not self.finished or \
                 writtenSentences < self.processedSentences):
