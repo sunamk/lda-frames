@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+ * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
+ *
+ */
+
 #ifndef _FRAMES
 #define _FRAMES
 
