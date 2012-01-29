@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+# Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
+
+
 """Definitions of supported methods for selecting frame realizations"""
 import sys
 

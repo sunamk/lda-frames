@@ -1,4 +1,7 @@
 #!/usr/bin/python
+#
+# Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+# Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
 
 """This script generates the specified grammatical relation tuples
 from a plain text corpus using the Stanford parser. The input file is assumed
