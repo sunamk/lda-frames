@@ -21,6 +21,7 @@ USAGE: generate_rels.py NUMBER_OF_CORES INPUT_FILE
 
 import sys
 import re
+import time
 import signal
 import getopt
 import methods
@@ -30,11 +31,16 @@ from Queue import Queue
 
 class Worker:
     def __init__(self, args):
-        self.server = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.args = args
+        self.server = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            preexec_fn = self.preexec_function)
         self.stdin = self.server.stdin
         self.stdout = self.server.stdout
 
-    def parse(self, sentence):
+    def preexec_function(self):
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    
+    def parse(self, sentence, recover=False):
         try:
             self.stdin.write(sentence + "\n")
         except IOError:
@@ -108,8 +114,7 @@ class Client(threading.Thread):
 
 
 class Generator:
-    def __init__(self, cores, args):
-        self.cores = cores
+    def __init__(self):
         self.servers = Queue()
         self.processedLines = 0
         self.processedSentences = 0
@@ -117,6 +122,8 @@ class Generator:
         self.finished = False
         self.exit = False
 
+    def createWorkers(self, cores, args):
+        self.cores = cores
         for s in range(self.cores):
             self.servers.put(Worker(args))
 
@@ -163,13 +170,14 @@ class Generator:
             thread.join()
             result = thread.getResult()
             server = thread.getServer()
-            self.servers.put(server, True)
             tuples = method(result)
-            if result == False or tuples == False:
-                self.exit = True
-                print "Last processed line: %d." % self.processedLines
+            if result == False:
+                sys.stderr.write("Internal error occured. Restarting server.\n")
+                self.servers.put(Worker(server.args), True)
             else:
                 outputFile.write(tuples)
+                self.servers.put(server, True)
+
             writtenSentences += 1
 
         outputFile.close()
@@ -181,11 +189,11 @@ class Generator:
 
 
     def run(self, inputFileName, outputFileName, method, startingLine = 0):
+        
         self.cons_thread = threading.Thread(target=self.consumer,
                 args=(outputFileName, startingLine, method))
         self.cons_thread.start()
 
-        signal.signal(signal.SIGINT, self.signalHandler)
         self.producer(inputFileName, startingLine)
 
         self.cons_thread.join()
@@ -255,7 +263,9 @@ if __name__ == "__main__":
             "edu.stanford.nlp.pipeline.StanfordCoreNLP",
             "-annotators",  "tokenize,ssplit,pos,lemma,parse"]
 
-    generator = Generator(cores, args)
+    generator = Generator()
+    signal.signal(signal.SIGINT, generator.signalHandler)
+    generator.createWorkers(cores, args)
     generator.run(input_file, output_file, method, starting_line)
     sys.exit(0)
 
