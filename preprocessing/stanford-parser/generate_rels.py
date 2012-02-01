@@ -125,6 +125,9 @@ class Client(threading.Thread):
         self.result = False
         threading.Thread.__init__(self)
 
+    def getSentence(self):
+        return self.sentence
+
     def getResult(self):
         return self.result
 
@@ -194,21 +197,26 @@ class Generator:
 
             thread = self.threads.get(True)
             DBG("Consumer got worker.")
-            thread.join()
-            DBG("Worker finished.")
-            result = thread.getResult()
+            thread.join(300) #max. time to process one sentence is five minutes
             server = thread.getServer()
-            tuples = method(result)
-
-            if result == False:
-                WARN("Internal error occured. Restarting server.")
+            if (thread.isAlive()):
+                WARN("Server timed out. Skipping line and restarting server. " +\
+                     "(Sentence: '%s')"  %  thread.getSentence())
                 server.server.kill()
                 self.servers.put(Worker(server.args), True)
             else:
-                outputFile.write(tuples)
-                self.servers.put(server, True)
+                DBG("Worker finished.")
+                result = thread.getResult()
+                tuples = method(result)
 
-            writtenSentences += 1
+                if result == False:
+                    WARN("Internal error occured. Restarting server.")
+                    server.server.kill()
+                    self.servers.put(Worker(server.args), True)
+                else:
+                    outputFile.write(tuples)
+                    self.servers.put(server, True)
+                    writtenSentences += 1
 
         outputFile.close()
         INFO("Exiting consumer.")
