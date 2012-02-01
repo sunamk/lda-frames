@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
 # Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
+#
 
 """This script generates the specified grammatical relation tuples
 from a plain text corpus using the Stanford parser. The input file is assumed
@@ -30,7 +31,15 @@ import getopt
 import methods
 import threading
 import subprocess
+import logging
+import logger
 from Queue import Queue
+from logger import DBG
+from logger import WARN
+from logger import INFO
+
+logger.setLogFile("generate_rels.log")
+logger.setLevel(logging.INFO)
 
 class Worker:
     def __init__(self, args):
@@ -39,27 +48,36 @@ class Worker:
             preexec_fn = self.preexec_function)
         self.stdin = self.server.stdin
         self.stdout = self.server.stdout
+        DBG("Worker initialized.")
 
     def preexec_function(self):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
     
-    def parse(self, sentence, recover=False):
+    def parse(self, inputsentence, recover=False):
+        DBG("Parsing sentence: %s" % inputsentence)
+        
         try:
-            self.stdin.write(sentence + "\n")
+            self.stdin.write(inputsentence + "\n")
         except IOError:
+            WARN("Error while writing the sentence to CoreNLP.")
             return False
         state = 0
-        sentence = {"deps":[], "lemmas":[]}
+        result = {"deps":[], "lemmas":[]}
+
+        DBG("Worker wrote sentence")
 
         while(True):
+            #DBG("Waiting for line.")
             line = self.stdout.readline()
+            #DBG("Read line: '%s'." % line)
             if line == "":
+                WARN("Read empty line. CoreNLP server is probably down.")
                 return False
             if line.startswith("NLP"):
                 state = 1
                 continue
             if state == 1:
-                sentence["text"] = line.strip()
+                result["text"] = line.strip()
                 state = 2
                 continue
             if line.startswith("[Text="):                
@@ -74,7 +92,7 @@ class Worker:
                         if a == "Lemma":
                             lemma = v
                             break   
-                    sentence['lemmas'].append(lemma)
+                    result['lemmas'].append(lemma)
             if line.startswith("(ROOT"):
                 state = 3
                 continue
@@ -87,10 +105,11 @@ class Worker:
                 split_entry = re.split("\(|, ", line[:-1])
                 if len(split_entry) == 3:
                     rel, left, right = map(lambda x: x, split_entry)
-                    sentence['deps'].append([rel,left,right])
+                    result['deps'].append([rel,left,right])
     
             if line.strip() == "" and state == 4:
-                return [sentence]
+                DBG("Worker returned processed sentence.")
+                return [result]
         
     def stop(self):
         self.server.kill()
@@ -127,10 +146,12 @@ class Generator:
 
     def createWorkers(self, cores, args):
         self.cores = cores
+        DBG("Creating %d workers." % cores)
         for s in range(self.cores):
             self.servers.put(Worker(args))
 
     def producer(self, inputFileName, startingLine):
+        INFO("Starting producer.")
         inputFile = open(inputFileName, "r")
         for line in inputFile.xreadlines():
             if self.exit == True:
@@ -147,15 +168,17 @@ class Generator:
             thread.start()
             self.threads.put(thread, True)
             if self.processedLines % (self.cores*10) == 0:
+                DBG("Processed lines: %d." % self.processedLines)
                 sys.stderr.write("Processed lines: %d.\n" % self.processedLines)
             self.processedSentences += 1
 
         inputFile.close()
         self.finished = True
-        sys.stderr.write("Producer: exiting.\n")
+        INFO("Exiting producer.")
 
 
     def consumer(self, outputFileName, startingLine, method):
+        INFO("Starting consumer.")
         outputFile = None
         writtenSentences = 0
 
@@ -170,12 +193,16 @@ class Generator:
                 writtenSentences < self.processedSentences):
 
             thread = self.threads.get(True)
+            DBG("Consumer got worker.")
             thread.join()
+            DBG("Worker finished.")
             result = thread.getResult()
             server = thread.getServer()
             tuples = method(result)
+
             if result == False:
-                sys.stderr.write("Internal error occured. Restarting server.\n")
+                WARN("Internal error occured. Restarting server.")
+                server.server.kill()
                 self.servers.put(Worker(server.args), True)
             else:
                 outputFile.write(tuples)
@@ -184,10 +211,10 @@ class Generator:
             writtenSentences += 1
 
         outputFile.close()
-        sys.stderr.write("Consumer: exiting.\n")
+        INFO("Exiting consumer.")
 
     def signalHandler(self, signum, frame):
-        print "Last processed line: %d." % self.processedLines
+        INFO("Last processed line: %d." % self.processedLines)
         self.exit = True
 
 
