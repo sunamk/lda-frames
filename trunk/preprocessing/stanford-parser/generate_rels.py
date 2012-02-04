@@ -252,8 +252,8 @@ if __name__ == "__main__":
     method = methods.parserstruct
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hm:s:d:c:x:", ["help", "method",
-            "starting_line", "output_dir", "corenlp", "max_memory"])
+        opts, args = getopt.getopt(sys.argv[1:], "hm:s:d:c:x:", ["help", "method=",
+            "starting_line=", "output_dir=", "corenlp=", "max_memory="])
     except getopt.error, msg:
         print msg
         print "for help use --help"
