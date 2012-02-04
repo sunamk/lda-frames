@@ -4,11 +4,15 @@
 # Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
 #
 
-"""This script generates the specified grammatical relation tuples
+"""
+This script generates the specified grammatical relation tuples
 from a plain text corpus using the Stanford parser. The input file is assumed
 to be a plain text with one sentence per line. All xml tags will be ingnored.
 
 USAGE: generate_rels.py NUMBER_OF_CORES INPUT_FILE
+    NUMBER_OF_CORES       Number of java workers. This number should not be grater
+                          than number of CPU cores.
+    INPUT_FILE            Path to the input file.
     -h, --help            Print this help.
     -m, --method m        Use method of selecting frame realizations m. The default
                           method is "allrels".
@@ -277,7 +281,7 @@ if __name__ == "__main__":
 
     if len(args) != 2:
         print "Wrong number of parameters."
-        print "for help use --help"
+        print __doc__
         sys.exit(1)
     cores = int(args[0])
     input_file = args[1]
