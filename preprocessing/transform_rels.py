@@ -25,7 +25,11 @@ USAGE: ./transform_rels.py file.rel ACTION
     -p, --pred_min p      Minimum frequency of predicates. Default is 1.
     -P, --pred_max P      Maximum frequency of predicates. Default is unlimited.
     -r, --real_min r      Minimum frequency of argument realisations. Default is 1.
-    -R, --real_max R      Maximum frequency of argument realisations. Default is unlimited.   
+    -R, --real_max R      Maximum frequency of argument realisations. Default is unlimited.
+    --pred_blacklist f    Ignore predicates from file f. The format of the file is one
+                          predicate per line. 
+    --real_blacklist f    Ignore realisations from file f. The format of the file is one
+                          realisation per line. 
     
 
 """
