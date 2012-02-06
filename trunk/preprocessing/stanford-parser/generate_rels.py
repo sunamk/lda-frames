@@ -43,7 +43,7 @@ from logger import WARN
 from logger import INFO
 
 logger.setLogFile("generate_rels.log")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 class Worker:
     def __init__(self, args):
@@ -206,6 +206,7 @@ class Generator:
             if (thread.isAlive()):
                 WARN("Server timed out. Skipping line and restarting server. " +\
                      "(Sentence: '%s')"  %  thread.getSentence())
+                server.server.kill()
                 server.server.kill()
                 self.servers.put(Worker(server.args), True)
             else:

@@ -61,7 +61,8 @@ if __name__ == "__main__":
 
     progress = 0
     f = open(input_file)
-    dictionary.setRelations(f.readline()[1:].strip().split("\t"))
+    relations = f.readline()[1:].strip().split("\t")
+    dictionary.setRelations(relations)
     for line in f.xreadlines():
         progress += 1
         if progress % 100000 == 0:
@@ -75,7 +76,11 @@ if __name__ == "__main__":
         pid = dictionary.pred2id(predicate)
         if pid > len(data): data.append([])
         for r in reals: dictionary.addRealisation(r)
-        data[pid-1].append(map(lambda r: dictionary.real2id(r), reals))
+        slots = map(lambda r: dictionary.real2id(r), reals)
+        if len(slots) != len(relations):
+            print "Wrong number of slots in input data: '%s'." % line
+            sys.exit(2)
+        data[pid-1].append(slots)
 
     print "Writing data."
     for p in data:

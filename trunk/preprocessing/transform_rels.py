@@ -162,7 +162,8 @@ if action == "realisation_hist":
 
 
 f = open(input_file)
-rel_names = f.readline()[1:].strip().split("\t")
+header = f.readline().strip()
+if action == "transform": print header
 constrained_lines = 0
 for line in f.xreadlines():
     line = line.strip()
