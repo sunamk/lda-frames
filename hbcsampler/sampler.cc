@@ -256,13 +256,16 @@ bool Sampler_t::loadData(string inputFileName) {
     }
 
     string line;
+    unsigned long int progress = 0;
     while (getline(ifs, line)) {
+        progress++;
         boost::char_separator<char> sep("\t");
         tokenizer tokens(line, sep);
         vector<vector<unsigned int> > unit;
+        unsigned long int itemcounter = 0;
         for (tokenizer::iterator tok_iter = tokens.begin();
             tok_iter != tokens.end(); ++tok_iter) {
-
+            itemcounter++;
             boost::char_separator<char> sep(" ");
             tokenizer slots(*tok_iter, sep);
 
@@ -282,7 +285,9 @@ bool Sampler_t::loadData(string inputFileName) {
                 S = s.size();
             } else{
                 if (S != s.size()) {
-                    cout << "Inconsitent number of slots.\n";
+                    cout << "Inconsitent number of slots at line no. " << 
+                        progress <<", item no. " << itemcounter << " (" << 
+                        *tok_iter << "). \n";
                     ifs.close();
                     return false;
                 }
