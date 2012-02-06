@@ -86,8 +86,11 @@ def subjobj(parseResult, desc=False):
                     rels[dep[1]][1] = "CLAUSE"
         for k, v in rels.iteritems():
             try:
-                result.append((normalize(lemmas[get_id(k) - 1]), normalize(v[0]), 
-                    normalize(v[1])))
+                entry = (normalize(lemmas[get_id(k) - 1]), normalize(v[0]), 
+                    normalize(v[1]))
+                if "" in entry:
+                    continue
+                result.append(entry)
             except ValueError:
                 continue
             except IndexError:
