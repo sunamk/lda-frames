@@ -22,8 +22,6 @@ int main(int argc, char **argv) {
 
     
     string inputFileName, outputDirectoryName;
-    string framesFileName = "frames.sampled";
-    string rolesFileName = "roles.sampled";
 
     unsigned int frames = 7;
     unsigned int roles = 4;
@@ -31,6 +29,7 @@ int main(int argc, char **argv) {
     float alpha = 0.1;
     float beta = 0.1;
     bool printResult = false;
+    bool allSamples = false;
     
     po::options_description desc("Allowed options");
 
@@ -38,13 +37,12 @@ int main(int argc, char **argv) {
         ("help", "produce help message")
         ("input-file", po::value<string>(), "input file name")
         ("output-directory", po::value<string>(),"output directory" )
-        ("frames-file", po::value<string>(), "frames output file name")
-        ("roles-file", po::value<string>(), "roles output file name")
         ("frames,F", po::value<unsigned int>(), "sampled frames")
         ("roles,R", po::value<unsigned int>(), "sampled roles")
         ("iters,I", po::value<unsigned int>(), "iterations")
         ("alpha", po::value<float>(), "alpha")
         ("beta", po::value<float>(), "beta")
+        ("all-samples,A", "save all samples")
         ("print,P", "print resulting frames and roles")
     ;
 
@@ -71,6 +69,10 @@ int main(int argc, char **argv) {
     if (vm.count("print")) {
         printResult = true;
     }
+    
+    if (vm.count("all-samples")) {
+        allSamples = true;
+    }
 
     if (vm.count("input-file"))
     {
@@ -86,14 +88,6 @@ int main(int argc, char **argv) {
     } else {
         outputUsage(desc, argv[0]);
         return 2;
-    }
-    
-    if (vm.count("frames-file")) {
-        framesFileName = vm["frames-file"].as<string>();
-    }
-
-    if (vm.count("roles-file")) {
-        rolesFileName = vm["roles-file"].as<string>();
     }
     
     if (vm.count("frames")) {
@@ -125,7 +119,7 @@ int main(int argc, char **argv) {
     cout << "Initializing..." << endl;
     sampler.initialize();
     cout << "Sampling..." << endl;
-    sampler.sampleAll(outputDirectoryName, iters);
+    sampler.sampleAll(outputDirectoryName, iters, allSamples);
     
     if (printResult) {
         sampler.printFrames();
