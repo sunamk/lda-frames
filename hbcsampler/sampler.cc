@@ -391,7 +391,7 @@ void Sampler_t::sample(void) {
     resample_roles();
 }
 
-bool Sampler_t::sampleAll(string outputDir, unsigned int iters) {
+bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
     if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     int status = mkdir(outputDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     
@@ -426,7 +426,9 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters) {
         cout << "Iteration no. " << i + 1 << ".\n";
         sample();
         stringstream ss;
-        ss << i + 1;
+        if (allSamples) {
+            ss << i + 1 << "-";
+        }
         if (!dump(outputDir + ss.str())) {
             return false;
         }
@@ -436,8 +438,8 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters) {
 
 bool Sampler_t::dump(string prefix) {
 
-    string ffn = prefix + "-frames.smpl";
-    string rfn = prefix + "-roles.smpl";
+    string ffn = prefix + "frames.smpl";
+    string rfn = prefix + "roles.smpl";
 
     ofstream ffile(ffn.c_str());
     if (!ffile.is_open()) {

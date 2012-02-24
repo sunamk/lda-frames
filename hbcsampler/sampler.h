@@ -34,7 +34,7 @@ public:
 
     bool dumpBest(string outputDir);
     
-    bool sampleAll(string outputDir, unsigned int iters);
+    bool sampleAll(string outputDir, unsigned int iters, bool allSamples);
 
     void printFrames(void);
 
