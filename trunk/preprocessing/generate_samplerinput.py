@@ -9,12 +9,10 @@ This script takes as input a grammatical relations file, and generates the input
 for the sampler (where grammatical realisations are represented by numbers) and a pickle 
 with dictionaries, translating realisations and predicates to numbers and vice versa.
 
-USAGE: ./generate_samplerinput.py input.rel
+USAGE: ./generate_samplerinput.py input.rel path
     input.rel             Input file with the grammatical relation data.
+    path                  Output path.
     -h, --help            Print this help.
-    -o, --output_file o   Resulting data file. Default is the same as the input file
-                          with suffix '.dat'.
-    -d, --dict_file d     Resulting pickle with dictionaries. Default is the same as the
                           input file with suffix '.dict'.
 """
 
@@ -25,12 +23,8 @@ from ldafdict import Dictionary
 
 
 if __name__ == "__main__":
-    output_file_name = None
-    dict_file_name = None
-
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:d:", ["help", "output_file=",
-            "dict_file="])
+        opts, args = getopt.getopt(sys.argv[1:], "ho:d:", ["help"])
     except getopt.error, msg:
         print msg
         print "for help use --help"
@@ -39,22 +33,17 @@ if __name__ == "__main__":
         if o in ("-h", "--help"):
             print __doc__
             sys.exit(0)
-        if o in ("-o", "--output_file"):
-            output_file_name = a
-        if o in ("-d", "--dict_file"):
-            dict_file_name = a
 
-    if len(args) != 1:
+    if len(args) != 2:
         print "Wrong number of parameters."
         print __doc__
         sys.exit(1)
     input_file = args[0]
+    path = args[1]
+    if not path.endswith("/"): path += "/"
 
-    if output_file_name == None: output_file_name = input_file + ".dat"
-    if dict_file_name == None: dict_file_name = input_file + ".dict"
-
-    output_file = open(output_file_name, "w")
-    dict_file = open(dict_file_name, "w")
+    output_file = open(path + "relations.dat", "w")
+    dict_file = open(path + "relations.dict", "w")
 
     dictionary = Dictionary()
     data = []
