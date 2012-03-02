@@ -15,12 +15,15 @@ class LDAF():
     
     def __init__(self, path):
         try:
-            self.frames = shelve.open(path + "frames.db")
-            self.frameDist = shelve.open(path + "framedist.db")
-            self.realDist = shelve.open(path + "realdist.db")
+            self.frames = shelve.open(path + "frames.db", flag='r')
+            self.frameDist = shelve.open(path + "framedist.db", flag='r')
+            self.realDist = shelve.open(path + "realdist.db", flag='r')
         except anydbm.error, msg:
             print "Cannot open database files."
-            print msg
+            raise
+
+    def getRelations(self):
+        return self.frames["__description__"]
 
     def getPredicates(self):
         return sorted(self.frameDist.keys())
