@@ -70,7 +70,8 @@ if __name__ == "__main__":
     
     roles_hist = {}
     print "Generating frame distributions..."
-    frame_database = shelve.open(path+"framedist.db", protocol=cPickle.HIGHEST_PROTOCOL)
+    frame_database = shelve.open(path+"framedist.db", flag='n', 
+            protocol=cPickle.HIGHEST_PROTOCOL)
 
     for u, (data_line, frames_line) in enumerate(izip(data_file.xreadlines(), 
                 frames_file.xreadlines())):
@@ -99,7 +100,8 @@ if __name__ == "__main__":
     frames_file.close()
 
     print "Generating realisation distributions..."
-    role_database = shelve.open(path+"realdist.db", protocol=cPickle.HIGHEST_PROTOCOL)
+    role_database = shelve.open(path+"realdist.db", flag='n',
+             protocol=cPickle.HIGHEST_PROTOCOL)
     for role, hist in roles_hist.iteritems():
         s = 0
         dist = []
@@ -111,7 +113,8 @@ if __name__ == "__main__":
         role_database[role] = dist
     role_database.close()
 
-    frames_database = shelve.open(path+"frames.db", protocol=cPickle.HIGHEST_PROTOCOL)
+    frames_database = shelve.open(path+"frames.db", flag='n',
+            protocol=cPickle.HIGHEST_PROTOCOL)
     for i,f in enumerate(roles):
         frames_database[str(i+1)] = map(str, roles[i])
     frames_database.close()
