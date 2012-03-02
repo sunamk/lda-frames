@@ -46,6 +46,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     path  = args[0]
+    if not path.endswith("/"): path += "/"
     if len(args) == 1:
         ldaf = libldaf.LDAF(path)
         print "\n".join(ldaf.getPredicates())
@@ -59,6 +60,7 @@ if __name__ == "__main__":
         print "No such predicate in the database (%s)." % predicate
         sys.exit(2)
 
+    print "Grammatical relations: " + ", ".join(ldaf.getRelations())
     for fp in frameDist:
         frame = ldaf.getFrame(str(fp[0]))
         print fp, frame

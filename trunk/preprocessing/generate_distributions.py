@@ -117,6 +117,7 @@ if __name__ == "__main__":
             protocol=cPickle.HIGHEST_PROTOCOL)
     for i,f in enumerate(roles):
         frames_database[str(i+1)] = map(str, roles[i])
+        frames_database["__description__"] = dictionary.getRelations()
     frames_database.close()
         
         
