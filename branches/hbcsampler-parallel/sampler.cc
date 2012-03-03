@@ -67,6 +67,8 @@ void Sampler_t::resample_post_theta(void) {
 
 void Sampler_t::resample_frames(void) {
     
+
+    #pragma omp parallel for schedule(dynamic)
     for (int u = 1; u <= (signed int) U; ++u) {
         double* post_frames = (double*) malloc(sizeof(double) * (F + 1));
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
@@ -89,6 +91,7 @@ void Sampler_t::resample_frames(void) {
             }
 
             normalizeLog(post_frames, 1, F);
+            #pragma omp critical 
             {
                 for (unsigned int s=1; s<=S; ++s) {
                     fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
@@ -98,6 +101,7 @@ void Sampler_t::resample_frames(void) {
 
             frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
 
+            #pragma omp critical 
             {
                 for (unsigned int s=1; s<=S; ++s) {
                     fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
@@ -125,6 +129,8 @@ void Sampler_t::resample_roles(void) {
     }
     vec[R] = 1.0;
 
+
+    #pragma omp parallel for schedule(dynamic)
     for (int f = 1; f <= (signed int) F; ++f) {
         double* post_roles = (double*) malloc(sizeof(double) * (R + 1));
         
@@ -138,6 +144,7 @@ void Sampler_t::resample_roles(void) {
             post_roles[R] = 0.0;
            
             FrameKey_t oldFrame; 
+            #pragma omp critical
             oldFrame = frameSet->makeKey(roles[f-1]);
             
             for (unsigned int r = 1; r <= R; ++r) {
@@ -145,6 +152,7 @@ void Sampler_t::resample_roles(void) {
                 post_roles[r-1] = -1 * numeric_limits<double>::max(); //zero probability
                 FrameKey_t newFrame;
                 bool inside;
+                #pragma omp critical
                 {
                     newFrame = frameSet->makeKey(roles[f-1], s, r);
                     inside = frameSet->inside(newFrame);
@@ -168,6 +176,7 @@ void Sampler_t::resample_roles(void) {
             
             normalizeLog(post_roles, 1, R);
 
+            #pragma omp critical 
             {
                 roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
                 frameSet->remove(oldFrame);
