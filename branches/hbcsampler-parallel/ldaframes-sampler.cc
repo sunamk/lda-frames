@@ -30,6 +30,7 @@ int main(int argc, char **argv) {
     float beta = 0.1;
     bool printResult = false;
     bool allSamples = false;
+    int cores = 1;
     
     po::options_description desc("Allowed options");
 
@@ -42,6 +43,7 @@ int main(int argc, char **argv) {
         ("iters,I", po::value<unsigned int>(), "iterations")
         ("alpha", po::value<float>(), "alpha")
         ("beta", po::value<float>(), "beta")
+        ("cores,C", po::value<unsigned int>(), "number of cores (default 1)")
         ("all-samples,A", "save all samples")
         ("print,P", "print resulting frames and roles")
     ;
@@ -110,8 +112,17 @@ int main(int argc, char **argv) {
         beta = vm["beta"].as<float>();
     }
     
+    if (vm.count("cores")) {
+        cores = vm["cores"].as<unsigned int>();
+        if (cores < 1) {
+            cout << "Wrong number of cores (" << cores << 
+                    "). It must be >= 1." << endl;
+            return 2;
+        }
+    }
+    
 
-    Sampler_t sampler(frames, roles, alpha, beta);
+    Sampler_t sampler(frames, roles, alpha, beta, cores);
     
     cout << "Loading data..." << endl;
     if (!sampler.loadData(inputFileName)) return 3;

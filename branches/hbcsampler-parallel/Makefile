@@ -2,8 +2,7 @@ CXX = g++
 #CXXFLAGS = -g -Wall -pedantic 
 CXXFLAGS = -Wall -pedantic -fopenmp -O3
 
-LIBS = -lm -lboost_program_options
-
+LIBS = -lm -lboost_program_options 
 OBJS := sampler.o samplib.o stats.o frames.o
 #SRCS := samplib.c sampler.cc ldaframes-sampler.cc
 

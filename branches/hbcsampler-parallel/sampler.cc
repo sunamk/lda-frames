@@ -67,54 +67,46 @@ void Sampler_t::resample_post_theta(void) {
 
 void Sampler_t::resample_frames(void) {
     
-
-    #pragma omp parallel for schedule(dynamic)
     for (int u = 1; u <= (signed int) U; ++u) {
         double* post_frames = (double*) malloc(sizeof(double) * (F + 1));
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
 
+            //remove old values
             for (unsigned int s = 1; s <= S; ++s) {
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
             }
-            post_phi[u-1][F] -= 1.0;
-            post_phi[u-1][frames[u-1][t-1]-1] -= 1.0;
-            post_frames[F] = 0;
+            post_phi[u-1][F]--;
+            post_phi[u-1][frames[u-1][t-1]-1]--;
+            fc_f[frames[u-1][t-1]-1]--;
 
+            //compute frame distribution
+            post_frames[F] = 0;
             for (unsigned int f = 1; f <= F; ++f) {
-                double tmp = 0.0;
-                post_frames[f-1] = 0.0;
+                double tmp = 0;
+                post_frames[f-1] = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[roles[f-1][s-1]-1], 1, V);
+                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], 
+                            post_theta[roles[f-1][s-1]-1], 1, V);
                 }
                 post_frames[f-1] = tmp + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
             }
-
             normalizeLog(post_frames, 1, F);
-            #pragma omp critical 
-            {
-                for (unsigned int s=1; s<=S; ++s) {
-                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
-                }
-                fc_f[frames[u-1][t-1]-1]--;
-            }
 
+            //sample frame
             frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
-
-            #pragma omp critical 
-            {
-                for (unsigned int s=1; s<=S; ++s) {
-                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
-                }
-                fc_f[frames[u-1][t-1]-1]++;
-            }
-
-            post_phi[u-1][F] += 1.0;
-            post_phi[u-1][frames[u-1][t-1]-1] += 1.0;
-            for (unsigned int s = 1; s<=S; ++s) {
+                
+            //update new values
+            for (unsigned int s=1; s<=S; ++s) {
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
             }
+            post_phi[u-1][F]++;
+            post_phi[u-1][frames[u-1][t-1]-1]++;
+            fc_f[frames[u-1][t-1]-1]++;
+            
         }
         free(post_frames);
     }
@@ -123,66 +115,58 @@ void Sampler_t::resample_frames(void) {
 void Sampler_t::resample_roles(void) {
 
     double* vec = (double*) malloc(sizeof(double) * (R + 1));
-
     for (unsigned int r = 1; r <= R; ++r) {
         vec[r-1] = 1.0 / R;
     }
     vec[R] = 1.0;
 
 
-    #pragma omp parallel for schedule(dynamic)
     for (int f = 1; f <= (signed int) F; ++f) {
         double* post_roles = (double*) malloc(sizeof(double) * (R + 1));
-        
-
         for (unsigned int s = 1; s <= S; ++s) {
+
+            //remove old values
             post_theta[roles[f-1][s-1]-1][V] -= fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
                 post_theta[roles[f-1][s-1]-1][v-1] -= fc_fsw[f-1][s-1][v-1];
             }
-
             post_roles[R] = 0.0;
-           
             FrameKey_t oldFrame; 
-            #pragma omp critical
             oldFrame = frameSet->makeKey(roles[f-1]);
-            
+
+            //compute role distribution
             for (unsigned int r = 1; r <= R; ++r) {
                 double prod = 0.0;
                 post_roles[r-1] = -1 * numeric_limits<double>::max(); //zero probability
                 FrameKey_t newFrame;
                 bool inside;
-                #pragma omp critical
-                {
-                    newFrame = frameSet->makeKey(roles[f-1], s, r);
-                    inside = frameSet->inside(newFrame);
-                }
+                newFrame = frameSet->makeKey(roles[f-1], s, r);
+                inside = frameSet->inside(newFrame);
 
                 if (newFrame == oldFrame || !inside) {
                     for (unsigned int u = 1; u <= U; ++u) {
                         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-                            if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
+                            if ((unsigned int) f == frames[u-1][t-1]) prod += 
+                                                    ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], 
+                                                    post_theta[r-1], 1, V);
                         }
                     }
                 
                     for (unsigned int v = 1; v<=V; ++v) {
-                        for (unsigned int i = 0; i < fc_fsw[f-1][s-1][v-1]; ++i) {
-                            prod += ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
-                        }
+                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, 
+                                post_theta[r-1], 1, V);
                     }
                     post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
                 }
             }
-            
             normalizeLog(post_roles, 1, R);
 
-            #pragma omp critical 
-            {
-                roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
-                frameSet->remove(oldFrame);
-                frameSet->insert(frameSet->makeKey(roles[f-1]));
-            }
-
+            //sample role
+            roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
+            
+            //update new values
+            frameSet->remove(oldFrame);
+            frameSet->insert(frameSet->makeKey(roles[f-1]));
             post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
                 post_theta[roles[f-1][s-1]-1][v-1] += fc_fsw[f-1][s-1][v-1];
@@ -315,6 +299,7 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
+    cout << "Number of cores = " << cores << endl; 
 
     return true;
 }
