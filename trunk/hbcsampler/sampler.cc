@@ -66,51 +66,46 @@ void Sampler_t::resample_post_theta(void) {
 
 
 void Sampler_t::resample_frames(void) {
-    
     for (int u = 1; u <= (signed int) U; ++u) {
         double* post_frames = (double*) malloc(sizeof(double) * (F + 1));
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
 
+            //remove old values
             for (unsigned int s = 1; s <= S; ++s) {
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
             }
-            post_phi[u-1][F] -= 1.0;
-            post_phi[u-1][frames[u-1][t-1]-1] -= 1.0;
-            post_frames[F] = 0;
+            post_phi[u-1][F]--;
+            post_phi[u-1][frames[u-1][t-1]-1]--;
+            fc_f[frames[u-1][t-1]-1]--;
 
+            //compute frame distribution
+            post_frames[F] = 0;
             for (unsigned int f = 1; f <= F; ++f) {
-                double tmp = 0.0;
-                post_frames[f-1] = 0.0;
+                double tmp = 0;
+                post_frames[f-1] = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[roles[f-1][s-1]-1], 1, V);
+                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1],
+                            post_theta[roles[f-1][s-1]-1], 1, V);
                 }
                 post_frames[f-1] = tmp + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
             }
-
             normalizeLog(post_frames, 1, F);
-            {
-                for (unsigned int s=1; s<=S; ++s) {
-                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
-                }
-                fc_f[frames[u-1][t-1]-1]--;
-            }
 
+            //sample frame
             frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
 
-            {
-                for (unsigned int s=1; s<=S; ++s) {
-                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
-                }
-                fc_f[frames[u-1][t-1]-1]++;
-            }
-
-            post_phi[u-1][F] += 1.0;
-            post_phi[u-1][frames[u-1][t-1]-1] += 1.0;
-            for (unsigned int s = 1; s<=S; ++s) {
+            //update new values
+            for (unsigned int s=1; s<=S; ++s) {
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
             }
+            post_phi[u-1][F]++;
+            post_phi[u-1][frames[u-1][t-1]-1]++;
+            fc_f[frames[u-1][t-1]-1]++;
+
         }
         free(post_frames);
     }
