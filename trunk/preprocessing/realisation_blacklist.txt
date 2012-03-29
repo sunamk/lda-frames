@@ -2,4 +2,8 @@ the
 a
 's
 &
-
+what
+which
+PRONOUN
+CLAUSE
+NUMBER

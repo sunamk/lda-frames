@@ -23,12 +23,19 @@ def normalize(word):
     """Normalizes words."""
     if word == "CLAUSE":
         return word
-    result = word.lower()
+    word = word.lower()
+    if word == "i" or word == "we" or word == "you" or word == "he" or word == "she" or\
+            word == "me" or word == "him" or word == "her" or word == "us":
+        return "person"
+    if word == "they" or word == "it" or word == "them" or word =="this" or word=="those" \
+            or word == "these":
+        return "PRONOUN"
     try:
-        float(result.replace(",", "").replace("-", "").replace(" ", ""))
+        float(word.replace(",", "").replace("-", "").replace(" ", ""))
         return "NUMBER"
     except ValueError:
-        return result
+        pass
+    return word
 
 def subjobj(parseResult, desc=False):
     """Generates SUBJECT -- OBJECT grammatical relations."""
@@ -58,8 +65,7 @@ def subjobj(parseResult, desc=False):
             except IndexError:
                 continue
 
-            if dep[0] == "agent" or dep[0] == "nsubj" or dep[0] == "nsubjpass" or \
-                    dep[0] == "xsubj":
+            if  dep[0] == "nsubj" or dep[0] == "nsubjpass":
                 try:
                     rels[dep[1]][0] = l2
                 except KeyError:
@@ -72,18 +78,12 @@ def subjobj(parseResult, desc=False):
                 except KeyError:
                     rels[dep[1]] = ["-", "-"]
                     rels[dep[1]][0] = "CLAUSE"
-            elif dep[0] == "dobj" or dep[0] == "xcomp":
+            elif dep[0] == "dobj":
                 try:
                     rels[dep[1]][1] = l2
                 except KeyError:
                     rels[dep[1]] = ["-", "-"]
                     rels[dep[1]][1] = l2
-            elif dep[0] == "ccomp":
-                try:
-                    rels[dep[1]][1] = "CLAUSE"
-                except KeyError:
-                    rels[dep[1]] = ["-", "-"]
-                    rels[dep[1]][1] = "CLAUSE"
         for k, v in rels.iteritems():
             try:
                 entry = (normalize(lemmas[get_id(k) - 1]), normalize(v[0]), 
