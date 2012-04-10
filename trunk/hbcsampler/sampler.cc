@@ -235,6 +235,8 @@ bool Sampler_t::loadData(string inputFileName) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
 
+    inputFile = inputFileName;
+
     ifstream ifs(inputFileName.c_str());
     if (!ifs.is_open()) {
         cout << "Cannot open file " << inputFileName << ".\n";
@@ -418,6 +420,9 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         if (!dump(outputDir + ss.str())) {
             return false;
         }
+        if (!writeLog(outputDir, i + 1, iters)) {
+            return false;
+        }
     }
     return true;
 }
@@ -457,6 +462,26 @@ bool Sampler_t::dump(string prefix) {
 
     ffile.close();
     rfile.close();
+    return true;
+}
+
+bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aiter) {
+    string fn = outputDir + "lda-frames.log";
+    ofstream lfile(fn.c_str());
+    if (!lfile.is_open()) {
+        cout << "Cannot open file '" << fn << "\n";
+        return false;
+    }
+
+    lfile << "Input file name:\t" << inputFile << endl;
+    lfile << "Number of frames:\t" << F << endl;
+    lfile << "Number of roles:\t" << R << endl;
+    lfile << "Number of slots:\t" << S << endl;
+    lfile << "Alpha:\t" << alpha << endl;
+    lfile << "Beta:\t" << beta << endl;
+    lfile << "Required number of iterations:\t" << aiter << endl;
+    lfile << "Last iteration:\t" << citer << endl; 
+    lfile.close();
     return true;
 }
 
