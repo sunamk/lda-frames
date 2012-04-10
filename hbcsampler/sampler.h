@@ -40,6 +40,8 @@ public:
 
     void printRoles(void);
 
+    bool writeLog(string outputDir, unsigned int citer, unsigned int aiter);
+
     ~Sampler_t();
 
 private:
@@ -58,6 +60,8 @@ private:
     double** post_theta;
 
     Frames_t *frameSet;
+
+    string inputFile;
   
     vector<vector<vector<unsigned int> > > w;//inputData;
     vector<unsigned int> fc_f;
