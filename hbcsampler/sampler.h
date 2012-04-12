@@ -21,12 +21,12 @@ public:
               float _alpha,
               float _beta): F(_F), R(_R), S(0), U(0), V(0),
                             alpha(_alpha), beta(_beta),
-                            initialized(false)
+                            startIter(1), initialized(false)
                             {};
 
     bool loadData(string inputFileName);
 
-    bool initialize(void);
+    bool initialize(bool recovery);
     
     void sample(void);
 
@@ -41,6 +41,10 @@ public:
     void printRoles(void);
 
     bool writeLog(string outputDir, unsigned int citer, unsigned int aiter);
+
+    bool recoverParameters(string logDir);
+
+    bool recoverData(string dataDir);
 
     ~Sampler_t();
 
@@ -62,6 +66,7 @@ private:
     Frames_t *frameSet;
 
     string inputFile;
+    unsigned int startIter;
   
     vector<vector<vector<unsigned int> > > w;//inputData;
     vector<unsigned int> fc_f;

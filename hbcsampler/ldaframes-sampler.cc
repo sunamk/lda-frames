@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
         ("alpha", po::value<float>(), "alpha")
         ("beta", po::value<float>(), "beta")
         ("all-samples,A", "save all samples")
+        ("recovery", "try to recover data and continue sampling")
         ("print,P", "print resulting frames and roles")
     ;
 
@@ -85,6 +86,8 @@ int main(int argc, char **argv) {
     if (vm.count("output-directory"))
     {
         outputDirectoryName = vm["output-directory"].as<string>();
+        if (outputDirectoryName.at(outputDirectoryName.size()-1) != '/') 
+            outputDirectoryName += "/";
     } else {
         outputUsage(desc, argv[0]);
         return 2;
@@ -109,16 +112,28 @@ int main(int argc, char **argv) {
     if (vm.count("beta")) {
         beta = vm["beta"].as<float>();
     }
-    
-
+        
     Sampler_t sampler(frames, roles, alpha, beta);
     
-    cout << "Loading data..." << endl;
-    if (!sampler.loadData(inputFileName)) return 3;
 
-    cout << "Initializing..." << endl;
-    sampler.initialize();
-    cout << "Sampling..." << endl;
+    
+    if (!vm.count("recovery")) {
+        cout << "Loading input data..." << endl;
+        if (!sampler.loadData(inputFileName)) return 3;
+        cout << "Initializing..." << endl;
+        sampler.initialize(false);
+
+    } else {
+        //recovery
+        cout << "Recovering parameters from log..." << endl;
+        if (!sampler.recoverParameters(outputDirectoryName)) return 3;
+        cout << "Loading input data..." << endl;
+        if (!sampler.loadData(inputFileName)) return 3;
+        sampler.initialize(true);
+        cout << "Recovering sampled data..." << endl;
+        if (!sampler.recoverData(outputDirectoryName)) return 3;
+    }
+
     sampler.sampleAll(outputDirectoryName, iters, allSamples);
     
     if (printResult) {
