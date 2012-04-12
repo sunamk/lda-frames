@@ -772,7 +772,8 @@ bool Sampler_t::recoverData(string dataDir) {
         return false;
     }
 
-
+    cout << "...resampling phi and theta." << endl;
+    
     initialize_post_phi();
     initialize_post_theta();
 
