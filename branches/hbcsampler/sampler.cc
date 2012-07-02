@@ -19,7 +19,6 @@
 #include <sys/stat.h>
 #include <sys/errno.h>
 #include <dirent.h>
-#include <string.h>
 #include <boost/tokenizer.hpp>
 
 #include "sampler.h"
@@ -27,72 +26,50 @@
 #include "stats.h"
 
 void Sampler_t::resample_post_phi(void) {
-    double* tmp = (double*) malloc(sizeof(double) * (F + 1));
     for (unsigned int u = 1; u <= U; ++u) {
-        for (unsigned int i = 1; i<=F; ++i) {
-            tmp[i-1] = 0.0;
+        for (unsigned int f = 1; f<=F; ++f) {
+            post_phi[u-1][f-1] = 0;
         }
-        tmp[F] = 0.0;
+        post_phi[u-1][F] = 0;
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
-            tmp[F] += 1.0;
-            tmp[frames[u-1][t-1] - 1] += 1.0;
+            post_phi[u-1][F]++;
+            post_phi[u-1][frames[u-1][t-1]-1]++;
         }
-        sample_Delta(post_phi[u-1], tmp, F);
     }
-    free(tmp);
 }
 
-
 void Sampler_t::resample_post_theta(void) {
-    double* tmp = (double*) malloc(sizeof(double) * (V + 1));
     for (unsigned int r = 1; r <= R; ++r) {
-        for (unsigned int i = 1; i <= V; ++i) {
-            tmp[i-1] = 0.0;
+        for (unsigned int v = 1; v <= V; ++v) {
+            post_theta[r-1][v-1] = 0;
         }
-        tmp[V] = 0.0;
+        post_theta[r-1][V] = 0;
         for (unsigned int u = 1; u <= U; ++u) {
             for (unsigned int t = 1; t <= w[u - 1].size(); ++t) {
                 for (unsigned int s = 1; s <= S; ++s) {
-                    tmp[V] += (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
-                    tmp[w[u-1][t-1][s-1]-1] += 
+                    post_theta[r-1][V] += (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
+                    post_theta[r-1][w[u-1][t-1][s-1]-1] += 
                         (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
                 }
             }
         }
-        sample_Delta(post_theta[r-1], tmp, V);
     }
-    free(tmp);
 }
 
 
-
 void Sampler_t::resample_frames(void) {
-
-    vector<vector<unsigned int> > post_theta_local;
-    for (unsigned int i=0; i<R; ++i) {
-        post_theta_local.push_back(vector<unsigned int>(post_theta[i], post_theta[i]+V+1));
-    }
-
-    #pragma omp parallel for firstprivate(post_theta_local) schedule(dynamic) 
-    //#pragma omp parallel for schedule(dynamic) 
     for (int u = 1; u <= (signed int) U; ++u) {
         double* post_frames = (double*) malloc(sizeof(double) * (F + 1));
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
 
             //remove old values
             for (unsigned int s = 1; s <= S; ++s) {
-                post_theta_local[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
-                post_theta_local[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
-                #pragma omp critical
-                {
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
                 fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
-                }
             }
             post_phi[u-1][F]--;
             post_phi[u-1][frames[u-1][t-1]-1]--;
-            #pragma omp atomic
             fc_f[frames[u-1][t-1]-1]--;
 
             //compute frame distribution
@@ -101,8 +78,8 @@ void Sampler_t::resample_frames(void) {
                 double tmp = 0;
                 post_frames[f-1] = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], 
-                            post_theta_local[roles[f-1][s-1]-1], 1, V);
+                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1],
+                            post_theta[roles[f-1][s-1]-1], 1, V);
                 }
                 post_frames[f-1] = tmp + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
             }
@@ -110,83 +87,79 @@ void Sampler_t::resample_frames(void) {
 
             //sample frame
             frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
-                
+
             //update new values
             for (unsigned int s=1; s<=S; ++s) {
-                post_theta_local[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
-                post_theta_local[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
-                #pragma omp critical
-                {
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
                 post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
                 fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
-                }
             }
             post_phi[u-1][F]++;
             post_phi[u-1][frames[u-1][t-1]-1]++;
-            #pragma omp atomic
             fc_f[frames[u-1][t-1]-1]++;
-            
+
         }
         free(post_frames);
     }
 }
 
 void Sampler_t::resample_roles(void) {
-
     double* vec = (double*) malloc(sizeof(double) * (R + 1));
+
     for (unsigned int r = 1; r <= R; ++r) {
         vec[r-1] = 1.0 / R;
     }
     vec[R] = 1.0;
 
-
     for (int f = 1; f <= (signed int) F; ++f) {
         double* post_roles = (double*) malloc(sizeof(double) * (R + 1));
-        for (unsigned int s = 1; s <= S; ++s) {
+        
 
-            //remove old values
+        for (unsigned int s = 1; s <= S; ++s) {
             post_theta[roles[f-1][s-1]-1][V] -= fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
                 post_theta[roles[f-1][s-1]-1][v-1] -= fc_fsw[f-1][s-1][v-1];
             }
+
             post_roles[R] = 0.0;
+           
             FrameKey_t oldFrame; 
             oldFrame = frameSet->makeKey(roles[f-1]);
-
-            //compute role distribution
+            
             for (unsigned int r = 1; r <= R; ++r) {
                 double prod = 0.0;
                 post_roles[r-1] = -1 * numeric_limits<double>::max(); //zero probability
                 FrameKey_t newFrame;
                 bool inside;
-                newFrame = frameSet->makeKey(roles[f-1], s, r);
-                inside = frameSet->inside(newFrame);
+                {
+                    newFrame = frameSet->makeKey(roles[f-1], s, r);
+                    inside = frameSet->inside(newFrame);
+                }
 
                 if (newFrame == oldFrame || !inside) {
+                    /*
                     for (unsigned int u = 1; u <= U; ++u) {
                         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-                            if ((unsigned int) f == frames[u-1][t-1]) prod += 
-                                                    ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], 
-                                                    post_theta[r-1], 1, V);
+                            if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
                         }
-                    }
+                    }*/
                 
                     for (unsigned int v = 1; v<=V; ++v) {
-                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, 
-                                post_theta[r-1], 1, V);
+                        //prod += 2*fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
+                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
                     }
                     post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
                 }
             }
+            
             normalizeLog(post_roles, 1, R);
 
-            //sample role
-            roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
-            
-            //update new values
-            frameSet->remove(oldFrame);
-            frameSet->insert(frameSet->makeKey(roles[f-1]));
+            {
+                roles[f-1][s-1] = sample_Mult(post_roles, 1, R);
+                frameSet->remove(oldFrame);
+                frameSet->insert(frameSet->makeKey(roles[f-1]));
+            }
+
             post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
                 post_theta[roles[f-1][s-1]-1][v-1] += fc_fsw[f-1][s-1][v-1];
@@ -208,7 +181,6 @@ void Sampler_t::initialize_frames(void) {
                 fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
             }
         }
-        frames[u-1][(w[u-1].size())] = 0;
     }
 }
 
@@ -221,16 +193,15 @@ void Sampler_t::initialize_roles(void) {
         } while (frameSet->inside(frameSet->makeKey(roles[f-1])));
         FrameKey_t fk = frameSet->makeKey(roles[f-1]);
         frameSet->insert(fk);
-        roles[f-1][S] = 0;
     }
 }
 
 void Sampler_t::initialize_post_phi(void) {
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int f=1; f<=F; ++f) {
-            post_phi[u-1][f-1] = 0.0;
+            post_phi[u-1][f-1] = 0;
         }
-        post_phi[u-1][F] = 0.0;
+        post_phi[u-1][F] = 0;
     }
     resample_post_phi();
 }
@@ -240,9 +211,9 @@ void Sampler_t::initialize_post_phi(void) {
 void Sampler_t::initialize_post_theta(void) {
     for (unsigned int r=1; r<=R; ++r) {
         for (unsigned int v=1; v<=V; ++v) {
-            post_theta[r-1][v-1] = 0.0;
+            post_theta[r-1][v-1] = 0;
         }
-        post_theta[r-1][V] = 0.0;
+        post_theta[r-1][V] = 0;
     }
     resample_post_theta();
 }
@@ -252,6 +223,8 @@ void Sampler_t::initialize_post_theta(void) {
 bool Sampler_t::loadData(string inputFileName) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+
+    inputFile = inputFileName;
 
     ifstream ifs(inputFileName.c_str());
     if (!ifs.is_open()) {
@@ -319,43 +292,47 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
-    cout << "Number of cores = " << cores << endl; 
 
     return true;
 }
 
-bool Sampler_t::initialize(void) {
+bool Sampler_t::initialize(bool recovery) {
     setall(time(0),time(0));   /* initialize random number generator */
     cout << "Allocating memory..." << endl;
 
-    frames = (unsigned int**) malloc(sizeof(unsigned int*) * (1+(U)-(1)));
-    for (unsigned int malloc_dim_1=1; malloc_dim_1<=U; malloc_dim_1++) {
-        frames[malloc_dim_1-1] = (unsigned int*) malloc(sizeof(unsigned int) * (1+((w[malloc_dim_1-1].size()) + (1))-(1)));
+    frames = (unsigned int**) malloc(sizeof(unsigned int*) * U);
+    for (unsigned int u=1; u<=U; ++u) {
+        //frames[u-1] = (unsigned int*) malloc(sizeof(unsigned int) * (w[u-1].size() + 1));
+        frames[u-1] = (unsigned int*) malloc(sizeof(unsigned int) * w[u-1].size());
     }
 
-    post_phi = (double**) malloc(sizeof(double*) * (1+(U)-(1)));
-    for (unsigned int malloc_dim_1=1; malloc_dim_1<=U; malloc_dim_1++) {
-        post_phi[malloc_dim_1-1] = (double*) malloc(sizeof(double) * (1+((F) + (1))-(1)));
-    }
-
-    post_theta = (double**) malloc(sizeof(double*) * (1+(R)-(1)));
-    for (unsigned int malloc_dim_1=1; malloc_dim_1<=R; malloc_dim_1++) {
-        post_theta[malloc_dim_1-1] = (double*) malloc(sizeof(double) * (1+((V) + (1))-(1)));
-    }    
-    
-    roles = (unsigned int**) malloc(sizeof(unsigned int*) * (1+(F)-(1)));
-    for (unsigned int malloc_dim_1=1; malloc_dim_1<=F; malloc_dim_1++) {
-        roles[malloc_dim_1-1] = (unsigned int*) malloc(sizeof(unsigned int) * (1+((S) + (1))-(1)));
+    roles = (unsigned int**) malloc(sizeof(unsigned int*) * F);
+    for (unsigned int f=1; f<=F; ++f) {
+        //roles[f-1] = (unsigned int*) malloc(sizeof(unsigned int) * (S + 1));
+        roles[f-1] = (unsigned int*) malloc(sizeof(unsigned int) * S);
         fc_f.push_back(0);
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
-    }    
+    }
 
-    cout << "Initializing variables..." << endl;
-    initialize_frames();
-    initialize_roles();
-    initialize_post_phi();
-    initialize_post_theta();
+    post_phi = (double**) malloc(sizeof(double*) * U);
+    for (unsigned int u=1; u<=U; ++u) {
+        post_phi[u-1] = (double*) malloc(sizeof(double) * (F + 1));
+    }
+
+    post_theta = (double**) malloc(sizeof(double*) * R);
+    for (unsigned int r=1; r<=R; ++r) {
+        post_theta[r-1] = (double*) malloc(sizeof(double) * (V + 1));
+    }    
     
+    if (!recovery) {
+        cout << "Initializing variables..." << endl;
+        initialize_frames();
+        initialize_roles();
+        initialize_post_phi();
+        initialize_post_theta();
+    
+    }
+
     initialized = true;
     return true;    
 
@@ -365,24 +342,21 @@ Sampler_t::~Sampler_t() {
     
     if (initialized) {
 
-        for (unsigned int malloc_dim_1=1; malloc_dim_1<=F; malloc_dim_1++) {
-            free(roles[malloc_dim_1-1]);
+        for (unsigned int f=1; f<=F; ++f) {
+            free(roles[f-1]);
         }
         free(roles);
 
-        for (unsigned int malloc_dim_1=1; malloc_dim_1<=R; malloc_dim_1++) {
-            free(post_theta[malloc_dim_1-1]);
+        for (unsigned int r=1; r<=R; ++r) {
+            free(post_theta[r-1]);
         }
         free(post_theta);
 
-        for (unsigned int malloc_dim_1=1; malloc_dim_1<=U; malloc_dim_1++) {
-            free(post_phi[malloc_dim_1-1]);
+        for (unsigned int u=1; u<=U; ++u) {
+            free(post_phi[u-1]);
+            free(frames[u-1]);
         }
         free(post_phi);
-
-        for (unsigned int malloc_dim_1=1; malloc_dim_1<=U; malloc_dim_1++) {
-            free(frames[malloc_dim_1-1]);
-        }
         free(frames);
 
         delete frameSet;
@@ -399,7 +373,12 @@ void Sampler_t::sample(void) {
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
     if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     int status = mkdir(outputDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    
+
+    if(iters < startIter) {
+        cout << "All iterations already performed." << endl;
+        return true;
+    }   
+
     //TODO check outputDir
     if (status != 0 && errno != EEXIST) {
         cout << "Cannot create directory '" << outputDir << "'\n";
@@ -427,14 +406,17 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
     closedir(dp);
 
 
-    for (unsigned int i = 0; i < iters; ++i) {
-        cout << "Iteration no. " << i + 1 << ".\n";
+    for (unsigned int i = startIter; i < iters+1; ++i) {
+        cout << "Iteration no. " << i << ".\n";
         sample();
         stringstream ss;
         if (allSamples) {
-            ss << i + 1 << "-";
+            ss << i << "-";
         }
         if (!dump(outputDir + ss.str())) {
+            return false;
+        }
+        if (!writeLog(outputDir, i, iters)) {
             return false;
         }
     }
@@ -479,8 +461,27 @@ bool Sampler_t::dump(string prefix) {
     return true;
 }
 
+bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aiter) {
+    string fn = outputDir + "lda-frames.log";
+    ofstream lfile(fn.c_str());
+    if (!lfile.is_open()) {
+        cout << "Cannot open file '" << fn << "\n";
+        return false;
+    }
+
+    lfile << "Input file name:\t" << inputFile << endl;
+    lfile << "Number of frames:\t" << F << endl;
+    lfile << "Number of roles:\t" << R << endl;
+    lfile << "Number of slots:\t" << S << endl;
+    lfile << "Alpha:\t" << alpha << endl;
+    lfile << "Beta:\t" << beta << endl;
+    lfile << "Required number of iterations:\t" << aiter << endl;
+    lfile << "Last iteration:\t" << citer << endl; 
+    lfile.close();
+    return true;
+}
+
 bool Sampler_t::dumpBest(string outputDir) {
-    if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     vector<ifstream *> fsamples;
     vector<vector<unsigned int> > frames, roles;
     
@@ -577,5 +578,207 @@ void Sampler_t::printRoles(void) {
         }
         if (f != F) cout << endl;
     }
+}
+
+bool Sampler_t::recoverParameters(string logDir) {
+
+    string fname = logDir + "lda-frames.log";
+    typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+
+    ifstream lfile(fname.c_str());
+    if (!lfile.is_open()) {
+        cout << "Cannot open log file '" << lfile << "\n";
+        return false;
+    }
+    //parsing the log file
+    string line;
+    unsigned long int progress = 0;
+    while (getline(lfile, line)) {
+        progress++;
+        boost::char_separator<char> sep("\t");
+        tokenizer tokens(line, sep);
+        vector<string> lineItems;
+        for (tokenizer::iterator tok_iter = tokens.begin();
+                tok_iter != tokens.end(); ++tok_iter) {
+            lineItems.push_back(*tok_iter);
+        }
+        if (lineItems.size() == 2) {
+            if (lineItems.at(0) == "Number of frames:") {
+                F = atoi(lineItems.at(1).c_str());
+                if (F <= 0) {
+                    cout << "Wrong number of frames in the log file (" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+            }
+            if (lineItems.at(0) == "Number of roles:") {
+                R = atoi(lineItems.at(1).c_str());
+                if (R <= 0) {
+                    cout << "Wrong number of roles in the log file (" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+            }
+            if (lineItems.at(0) == "Alpha:") {
+                alpha = atof(lineItems.at(1).c_str());
+                if (alpha <= 0) {
+                    cout << "Wrong alpha in the log file (" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+            }
+            if (lineItems.at(0) == "Beta:") {
+                beta = atof(lineItems.at(1).c_str());
+                if (beta <= 0) {
+                    cout << "Wrong beta in the log file(" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+            }
+            if (lineItems.at(0) == "Last iteration:") {
+                startIter = atoi(lineItems.at(1).c_str());
+                if (startIter <= 0) {
+                    cout << "Wrong last iteration number in the log file (" << 
+                            lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+                cout << "The last iteration was " << startIter << "." << endl;
+                startIter++;
+            }
+        }
+        
+    }
+
+    lfile.close();
+    return true;
+}
+
+bool Sampler_t::recoverData(string dataDir) {
+    string ffname = dataDir + "frames.smpl";
+    string rfname = dataDir + "roles.smpl";
+    typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+
+    ifstream ffile(ffname.c_str());
+    if (!ffile.is_open()) {
+        cout << "Cannot open file '" << ffname << "'. (TODO: find the file " <<
+                "with latest sample automatically.)\n";
+        return false;
+    }
+    
+    ifstream rfile(rfname.c_str());
+    if (!rfile.is_open()) {
+        cout << "Cannot open file '" << rfname << "'. (TODO: find the file " <<
+                "with latest sample automatically.)\n";
+        return false;
+    }
+    //parsing frames.smpl
+    cout << "...parsing '" << dataDir << "frames.smpl'." << endl;
+    string line;
+    unsigned long int u = 0;
+    while (getline(ffile, line)) {
+        u++;
+        if (u > U) {
+            cout << "Wrong number of lexical units." << endl;
+            ffile.close();
+            rfile.close();
+            return false;
+        }
+        boost::char_separator<char> sep(" ");
+        tokenizer tokens(line, sep);
+        unsigned long int t = 0;
+        for (tokenizer::iterator tok_iter = tokens.begin();
+                tok_iter != tokens.end(); ++tok_iter) {
+            t++;
+            if (t > w[u-1].size()) {
+                cout << "Wrong number of realizations (line #" << u <<")." << endl;
+                ffile.close();
+                rfile.close();
+                return false;
+            }
+            unsigned int frame = atoi(tok_iter->c_str());
+            if (frame <= 0 || frame > F) {
+                cout << "Wrong frame number (" << *tok_iter << ")." << endl;
+                ffile.close();
+                rfile.close();
+                return false;
+            }
+            //recover data
+            frames[u-1][t-1] = frame;
+            fc_f[frame-1]++;
+            for (unsigned int s=1; s<=S; ++s) {
+                fc_fsw[frame-1][s-1][w[u-1][t-1][s-1]-1]++;
+            }
+        }
+        if (t != w[u-1].size()) {
+            cout << "Wrong number of realizations (line #" << u <<")." << endl;
+            ffile.close();
+            rfile.close();
+            return false;
+        }
+
+    }
+    if (u != U) {
+        cout << "Wrong number of lexical units." << endl;
+        ffile.close();
+        rfile.close();
+        return false;
+    }
+    
+    //parsing roles.smpl
+    cout << "...parsing '" << dataDir << "roles.smpl'." << endl;
+    unsigned long int f = 0;
+    while (getline(rfile, line)) {
+        f++;
+        if (f > F) {
+            cout << "Wrong number of frames." << endl;
+            ffile.close();
+            rfile.close();
+            return false;
+        }
+        boost::char_separator<char> sep(" ");
+        tokenizer tokens(line, sep);
+        unsigned long int s = 0;
+        for (tokenizer::iterator tok_iter = tokens.begin();
+                tok_iter != tokens.end(); ++tok_iter) {
+            s++;
+            if (s > S) {
+                cout << "Wrong number of slots (line #" << f <<")." << endl;
+                ffile.close();
+                rfile.close();
+                return false;
+            }
+            unsigned int role = atoi(tok_iter->c_str());
+            if (role <= 0 || role > R) {
+                cout << "Wrong role number (" << *tok_iter << ")." << endl;
+                ffile.close();
+                rfile.close();
+                return false;
+            }
+            //recover data
+            roles[f-1][s-1] = role;
+        }
+        if (s != S) {
+            cout << "Wrong number of slots (line #" << f <<")." << endl;
+            ffile.close();
+            rfile.close();
+            return false;
+        }
+
+    }
+    //recover data
+    FrameKey_t fk = frameSet->makeKey(roles[f-1]);
+    frameSet->insert(fk);
+    if (f != F) {
+        cout << "Wrong number of frames." << endl;
+        ffile.close();
+        rfile.close();
+        return false;
+    }
+
+    cout << "...resampling phi and theta." << endl;
+    
+    initialize_post_phi();
+    initialize_post_theta();
+
+    ffile.close();
+    rfile.close();
+
+    return true;
 }
 

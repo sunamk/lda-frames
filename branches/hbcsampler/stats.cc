@@ -314,17 +314,6 @@ double ldf_Mult_smooth(int normalize, double eta, int x, double*th, int lo, int 
   return BOUNDPROB(log(th[x-lo]+eta) - log(s));
 }
 
-double ldf_Mult_smooth(int normalize, double eta, int x, std::vector<unsigned int> th, int lo, int hi) {
-  double s;
-  //int i;
-  // TODO: we shouldn't have to compute the sum
-  if ((x<lo)||(x>hi)) { return NEGINF; }
-  //s = eta*(hi-lo+1);
-  //for (i=hi-lo; i>=0; i--) { s+=th[i]; }
-  s = th[hi-lo+1] + eta*(hi-lo+1);
-  return BOUNDPROB(log(th[x-lo]+eta) - log(s));
-}
-
 double ldf_DirSym(int normalize, double*th, double al, int dim) {
   double l;
   double a;
