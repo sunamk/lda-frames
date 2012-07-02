@@ -104,7 +104,6 @@ void Sampler_t::resample_frames(void) {
 }
 
 void Sampler_t::resample_roles(void) {
-
     double* vec = (double*) malloc(sizeof(double) * (R + 1));
 
     for (unsigned int r = 1; r <= R; ++r) {
@@ -138,16 +137,16 @@ void Sampler_t::resample_roles(void) {
                 }
 
                 if (newFrame == oldFrame || !inside) {
+                    /*
                     for (unsigned int u = 1; u <= U; ++u) {
                         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
                             if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
                         }
-                    }
+                    }*/
                 
                     for (unsigned int v = 1; v<=V; ++v) {
-                        for (unsigned int i = 0; i < fc_fsw[f-1][s-1][v-1]; ++i) {
-                            prod += ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
-                        }
+                        //prod += 2*fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
+                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
                     }
                     post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
                 }
