@@ -56,6 +56,15 @@ void Sampler_t::resample_post_theta(void) {
     }
 }
 
+void Sampler_t::resample_post_omega(void) {
+    for (unsigned int f = 1; f <= F; ++f) {
+        for (unsigned int s = 1; s <= S; ++s) {
+            post_omega[roles[f-1][s-1]-1]++;
+            post_omega[R]++;
+        }
+    }
+}
+
 
 void Sampler_t::resample_frames(void) {
     for (int u = 1; u <= (signed int) U; ++u) {
@@ -121,6 +130,8 @@ void Sampler_t::resample_roles(void) {
                 post_theta[roles[f-1][s-1]-1][v-1] -= fc_fsw[f-1][s-1][v-1];
             }
 
+            post_omega[roles[f-1][s-1]-1]--;
+
             post_roles[R] = 0.0;
            
             FrameKey_t oldFrame; 
@@ -137,18 +148,13 @@ void Sampler_t::resample_roles(void) {
                 }
 
                 if (newFrame == oldFrame || !inside) {
-                    /*
-                    for (unsigned int u = 1; u <= U; ++u) {
-                        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-                            if ((unsigned int) f == frames[u-1][t-1]) prod += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], post_theta[r-1], 1, V);
-                        }
-                    }*/
-                
                     for (unsigned int v = 1; v<=V; ++v) {
-                        //prod += 2*fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
-                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, post_theta[r-1], 1, V);
+                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, 
+                            post_theta[r-1], 1, V);
                     }
-                    post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
+                    //post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
+                    post_roles[r-1] = prod + ldf_Mult_smooth(0, 0.05, r, post_omega, 
+                        1, R);
                 }
             }
             
@@ -160,6 +166,7 @@ void Sampler_t::resample_roles(void) {
                 frameSet->insert(frameSet->makeKey(roles[f-1]));
             }
 
+            post_omega[roles[f-1][s-1]-1]++;
             post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
                 post_theta[roles[f-1][s-1]-1][v-1] += fc_fsw[f-1][s-1][v-1];
@@ -218,6 +225,13 @@ void Sampler_t::initialize_post_theta(void) {
     resample_post_theta();
 }
 
+void Sampler_t::initialize_post_omega(void) {
+    for (unsigned int r=1; r<=R; ++r) {
+        post_omega[r-1] = 0;
+    }
+    post_omega[R] = 0;
+    resample_post_omega();
+}
 
 
 bool Sampler_t::loadData(string inputFileName) {
@@ -324,12 +338,15 @@ bool Sampler_t::initialize(bool recovery) {
         post_theta[r-1] = (double*) malloc(sizeof(double) * (V + 1));
     }    
     
+    post_omega = (double*) malloc(sizeof(double) * (R +1));
+    
     if (!recovery) {
         cout << "Initializing variables..." << endl;
         initialize_frames();
         initialize_roles();
         initialize_post_phi();
         initialize_post_theta();
+        initialize_post_omega();
     
     }
 
@@ -351,6 +368,8 @@ Sampler_t::~Sampler_t() {
             free(post_theta[r-1]);
         }
         free(post_theta);
+
+        free(post_omega);
 
         for (unsigned int u=1; u<=U; ++u) {
             free(post_phi[u-1]);
@@ -775,6 +794,7 @@ bool Sampler_t::recoverData(string dataDir) {
     
     initialize_post_phi();
     initialize_post_theta();
+    initialize_post_omega();
 
     ffile.close();
     rfile.close();

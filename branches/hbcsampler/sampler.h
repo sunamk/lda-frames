@@ -62,6 +62,7 @@ private:
 
     double** post_phi;
     double** post_theta;
+    double* post_omega;
 
     Frames_t *frameSet;
 
@@ -75,6 +76,7 @@ private:
     //sampling
     void resample_post_phi(void);
     void resample_post_theta(void);
+    void resample_post_omega(void);
     void resample_frames(void);
     void resample_roles(void);
 
@@ -85,6 +87,7 @@ private:
     void initialize_roles(void);
     void initialize_post_phi(void);
     void initialize_post_theta(void);
+    void initialize_post_omega(void);
 
 
 };
