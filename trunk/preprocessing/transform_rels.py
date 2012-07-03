@@ -174,6 +174,8 @@ if action == "predicate_hist":
     for p in hist:
         if p[0] in pred_blacklist:
             continue
+        if p[1] < pred_min or p[1]> pred_max:
+            continue
         if pred_list_file != False and not p[0] in pred_list:
             continue
         print "%d\t%s" % (p[1], p[0])
@@ -183,6 +185,8 @@ if action == "realisation_hist":
     hist = sorted(realisations.items(), key = lambda k: -k[1])
     for p in hist:
         if p[0] in real_blacklist:
+            continue
+        if p[1] < real_min or p[1]> real_max:
             continue
         if real_list_file != False and not p[0] in real_list:
             continue
