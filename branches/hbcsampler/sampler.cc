@@ -131,6 +131,7 @@ void Sampler_t::resample_roles(void) {
             }
 
             post_omega[roles[f-1][s-1]-1]--;
+            post_omega[R]--;
 
             post_roles[R] = 0.0;
            
@@ -167,6 +168,7 @@ void Sampler_t::resample_roles(void) {
             }
 
             post_omega[roles[f-1][s-1]-1]++;
+            post_omega[R]++;
             post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
             for(unsigned int v=1; v<=V; ++v) {
                 post_theta[roles[f-1][s-1]-1][v-1] += fc_fsw[f-1][s-1][v-1];
