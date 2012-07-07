@@ -19,8 +19,9 @@ public:
     Sampler_t(unsigned int _F,
               unsigned int _R,
               float _alpha,
-              float _beta): F(_F), R(_R), S(0), U(0), V(0),
-                            alpha(_alpha), beta(_beta),
+              float _beta,
+              float _gamma): F(_F), R(_R), S(0), U(0), V(0),
+                            alpha(_alpha), beta(_beta), gamma(_gamma),
                             startIter(1), initialized(false)
                             {};
 
@@ -56,6 +57,7 @@ private:
     unsigned int V;
     double alpha;
     double beta;
+    double gamma;
 
     unsigned int** frames;
     unsigned int** roles;

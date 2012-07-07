@@ -28,6 +28,7 @@ int main(int argc, char **argv) {
     unsigned int iters = 100;
     float alpha = 0.1;
     float beta = 0.1;
+    float gamma = 0.1;
     bool printResult = false;
     bool allSamples = false;
     
@@ -42,6 +43,7 @@ int main(int argc, char **argv) {
         ("iters,I", po::value<unsigned int>(), "iterations")
         ("alpha", po::value<float>(), "alpha")
         ("beta", po::value<float>(), "beta")
+        ("gamma", po::value<float>(), "gamma")
         ("all-samples,A", "save all samples")
         ("recovery", "try to recover data and continue sampling")
         ("print,P", "print resulting frames and roles")
@@ -112,8 +114,11 @@ int main(int argc, char **argv) {
     if (vm.count("beta")) {
         beta = vm["beta"].as<float>();
     }
+    if (vm.count("gamma")) {
+        gamma = vm["gamma"].as<float>();
+    }
         
-    Sampler_t sampler(frames, roles, alpha, beta);
+    Sampler_t sampler(frames, roles, alpha, beta, gamma);
     
 
     

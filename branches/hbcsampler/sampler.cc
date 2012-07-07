@@ -154,7 +154,7 @@ void Sampler_t::resample_roles(void) {
                             post_theta[r-1], 1, V);
                     }
                     //post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
-                    post_roles[r-1] = prod + ldf_Mult_smooth(0, 0.05, r, post_omega, 
+                    post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
                         1, R);
                 }
             }
@@ -305,6 +305,7 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "R = " << R << endl;
     cout << "alpha = " << alpha << endl;
     cout << "beta = " << beta << endl;
+    cout << "gamma = " << gamma << endl;
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
@@ -496,6 +497,7 @@ bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aite
     lfile << "Number of slots:\t" << S << endl;
     lfile << "Alpha:\t" << alpha << endl;
     lfile << "Beta:\t" << beta << endl;
+    lfile << "Gamma:\t" << gamma << endl;
     lfile << "Required number of iterations:\t" << aiter << endl;
     lfile << "Last iteration:\t" << citer << endl; 
     lfile.close();
@@ -649,6 +651,13 @@ bool Sampler_t::recoverParameters(string logDir) {
                 beta = atof(lineItems.at(1).c_str());
                 if (beta <= 0) {
                     cout << "Wrong beta in the log file(" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+            }
+            if (lineItems.at(0) == "Gamma:") {
+                gamma = atof(lineItems.at(1).c_str());
+                if (gamma <= 0) {
+                    cout << "Wrong gamma in the log file(" << lineItems.at(1) << ")." << endl;
                     return false;
                 }
             }
