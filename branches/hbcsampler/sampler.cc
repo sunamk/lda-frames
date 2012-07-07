@@ -87,7 +87,7 @@ void Sampler_t::resample_frames(void) {
                 double tmp = 0;
                 post_frames[f-1] = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    tmp += ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1],
+                    tmp += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
                             post_theta[roles[f-1][s-1]-1], 1, V);
                 }
                 post_frames[f-1] = tmp + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
@@ -149,7 +149,7 @@ void Sampler_t::resample_roles(void) {
 
                 if (newFrame == oldFrame || !inside) {
                     for (unsigned int v = 1; v<=V; ++v) {
-                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, 
+                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(1, beta, v, 
                             post_theta[r-1], 1, V);
                     }
                     //post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
