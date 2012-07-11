@@ -164,13 +164,6 @@ void Sampler_t::resample_roles(void) {
                 inside = frameSet->inside(newFrame);
 
                 if (newFrame == oldFrame || !inside) {
-                    for (unsigned int u = 1; u <= U; ++u) {
-                        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-                            if ((unsigned int) f == frames[u-1][t-1]) prod += 
-                                                    ldf_Mult_smooth(0, beta, w[u-1][t-1][s-1], 
-                                                    post_theta[r-1], 1, V);
-                        }
-                    }
                 
                     for (unsigned int v = 1; v<=V; ++v) {
                         prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(0, beta, v, 

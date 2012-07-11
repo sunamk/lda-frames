@@ -112,13 +112,53 @@ void Sampler_t::resample_frames(void) {
     }
 }
 
-void Sampler_t::resample_roles(void) {
-    double* vec = (double*) malloc(sizeof(double) * (R + 1));
+void Sampler_t::resample_frames_inf(void) {
+    for (int u = 1; u <= (signed int) U; ++u) {
+        double* post_frames = (double*) malloc(sizeof(double) * (F + 1));
+        for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
 
-    for (unsigned int r = 1; r <= R; ++r) {
-        vec[r-1] = 1.0 / R;
+            //remove old values
+            for (unsigned int s = 1; s <= S; ++s) {
+                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
+                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+            }
+            post_phi[u-1][F]--;
+            post_phi[u-1][frames[u-1][t-1]-1]--;
+            fc_f[frames[u-1][t-1]-1]--;
+
+            //compute frame distribution
+            post_frames[F] = 0;
+            for (unsigned int f = 1; f <= F; ++f) {
+                double tmp = 0;
+                post_frames[f-1] = 0;
+                for (unsigned int s = 1; s <= S; ++s) {
+                    tmp += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
+                            post_theta[roles[f-1][s-1]-1], 1, V);
+                }
+                post_frames[f-1] = tmp + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
+            }
+            normalizeLog(post_frames, 1, F);
+
+            //sample frame
+            frames[u-1][t-1] = sample_Mult(post_frames, 1, F);
+
+            //update new values
+            for (unsigned int s=1; s<=S; ++s) {
+                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
+                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+            }
+            post_phi[u-1][F]++;
+            post_phi[u-1][frames[u-1][t-1]-1]++;
+            fc_f[frames[u-1][t-1]-1]++;
+
+        }
+        free(post_frames);
     }
-    vec[R] = 1.0;
+}
+
+void Sampler_t::resample_roles(void) {
 
     for (int f = 1; f <= (signed int) F; ++f) {
         double* post_roles = (double*) malloc(sizeof(double) * (R + 1));
@@ -152,11 +192,9 @@ void Sampler_t::resample_roles(void) {
                     for (unsigned int v = 1; v<=V; ++v) {
                         prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(1, beta, v, 
                             post_theta[r-1], 1, V);
-
                     }
                     post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
                         1, R);
-                    //post_roles[r-1] = prod + ldf_Mult(0, r, vec, 1, R);
                 }
             }
             
@@ -177,8 +215,95 @@ void Sampler_t::resample_roles(void) {
         }
         free(post_roles);
     }
-    free(vec);
 }
+
+void Sampler_t::resample_roles_inf(void) {
+
+    for (int f = 1; f <= (signed int) F; ++f) {
+        double* post_roles = (double*) malloc(sizeof(double) * (R + 2));
+        
+        for (unsigned int s = 1; s <= S; ++s) {
+            post_theta[roles[f-1][s-1]-1][V] -= fc_f[f-1];
+            for(unsigned int v=1; v<=V; ++v) {
+                post_theta[roles[f-1][s-1]-1][v-1] -= fc_fsw[f-1][s-1][v-1];
+            }
+
+            post_omega[roles[f-1][s-1]-1]--;
+            post_omega[R]--;
+
+            post_roles[R+1] = 0;
+           
+            FrameKey_t oldFrame; 
+            oldFrame = frameSet->makeKey(roles[f-1]);
+            
+            for (unsigned int r = 1; r <= R; ++r) {
+                double prod = 0.0;
+                post_roles[r-1] = -1 * numeric_limits<double>::max(); //zero probability
+                FrameKey_t newFrame;
+                bool inside;
+                newFrame = frameSet->makeKey(roles[f-1], s, r);
+                inside = frameSet->inside(newFrame);
+                set<unsigned int>::iterator it = used_roles.find(r);
+
+                //probability of used roles
+                if ((newFrame == oldFrame || !inside) && it != used_roles.end()) {
+                    for (unsigned int v = 1; v<=V; ++v) {
+                        prod += fc_fsw[f-1][s-1][v-1]*ldf_Mult_smooth(1, beta, v, 
+                            post_theta[r-1], 1, V);
+                    }
+                    post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
+                        1, R);
+                }
+            }
+
+            //probability of a new role
+            double prod = 0.0;
+            for (unsigned int v = 1; v<=V; ++v) {
+                prod -= fc_fsw[f-1][s-1][v-1]*log(V);
+            }
+            post_roles[R] = log(gamma) + prod;
+            
+            normalizeLog(post_roles, 1, R + 1);
+            unsigned int newRole = sample_Mult(post_roles, 1, R + 1);
+            //cout << "New role: " <<  newRole << endl;
+
+            //not necessarily
+            set<unsigned int>::iterator it = used_roles.find(newRole);
+            if (it == used_roles.end() && newRole != (R + 1)) {
+                cerr << "Sampled disallowed role." << endl;
+                exit(10);
+            }
+            
+            //free unused role numbers
+            if (roles[f-1][s-1] != newRole && post_omega[roles[f-1][s-1]-1] == 0) {
+                unused_roles.insert(roles[f-1][s-1]);
+                used_roles.erase(roles[f-1][s-1]);
+            }
+            //create a new role if required
+            if (newRole == R + 1) {
+                if (!createNewRole(roles[f-1][s-1])) {
+                    cerr << "Error in creating new role." << endl;
+                    exit(11);
+                }
+                post_roles = (double*) realloc(post_roles, sizeof(double) * (R + 2));
+            } else {
+                roles[f-1][s-1] = newRole;
+            }
+
+            frameSet->remove(oldFrame);
+            frameSet->insert(frameSet->makeKey(roles[f-1]));
+
+            post_omega[roles[f-1][s-1]-1]++;
+            post_omega[R]++;
+            post_theta[roles[f-1][s-1]-1][V] += fc_f[f-1];
+            for(unsigned int v=1; v<=V; ++v) {
+                post_theta[roles[f-1][s-1]-1][v-1] += fc_fsw[f-1][s-1][v-1];
+            }
+        }
+        free(post_roles);
+    }
+}
+
 
 
 void Sampler_t::initialize_frames(void) {
@@ -234,6 +359,15 @@ void Sampler_t::initialize_post_omega(void) {
     }
     post_omega[R] = 0;
     resample_post_omega();
+}
+
+void Sampler_t::initialize_infinite_vars(void) {
+    for (unsigned int f=1; f<=F; ++f) {
+        used_frames.insert(f);
+    }
+    for (unsigned int r=1; r<=R; ++r) {
+        used_roles.insert(r);
+    }
 }
 
 
@@ -294,16 +428,30 @@ bool Sampler_t::loadData(string inputFileName) {
 
     ifs.close();
 
+
+    if (F == 0) {
+        cout << "F = automatic" << endl;
+        infinite_F = true;
+        F = 1;
+    } else {
+        cout << "F = " << F << endl;
+    }
+    if (R == 0) {
+        cout << "R = automatic" << endl;
+        infinite_R = true;
+        R = ceil(log(F)/log(S)); //minimum number of roles
+    } else {
+        cout << "R = " << R << endl;
+    }
+    
     if (F > pow(R, S)) {
         cout << "Number of frames (F) must be lower than or equal to the number of all " <<
                 "combinations of possible semantic roles (R^S)." << endl;
         return false;
     }
+    
+    frameSet = new Frames_t(S);
 
-    frameSet = new Frames_t(S, R);
-
-    cout << "F = " << F << endl;
-    cout << "R = " << R << endl;
     cout << "alpha = " << alpha << endl;
     cout << "beta = " << beta << endl;
     cout << "gamma = " << gamma << endl;
@@ -348,6 +496,7 @@ bool Sampler_t::initialize(bool recovery) {
         cout << "Initializing variables..." << endl;
         initialize_frames();
         initialize_roles();
+        initialize_infinite_vars();
         initialize_post_phi();
         initialize_post_theta();
         initialize_post_omega();
@@ -389,8 +538,16 @@ Sampler_t::~Sampler_t() {
 
 
 void Sampler_t::sample(void) {
-    resample_frames();
-    resample_roles();
+    if (infinite_F)
+        resample_frames_inf();
+    else
+        resample_frames();
+    
+    if (infinite_R)    
+        resample_roles_inf();
+    else
+        resample_roles();
+
 }
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
@@ -430,7 +587,8 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
 
 
     for (unsigned int i = startIter; i < iters+1; ++i) {
-        cout << "Iteration no. " << i << ".\n";
+        cout << "Iteration no. " << i << " (" << used_frames.size() << " frames, " 
+             << used_roles.size() << " roles).\n";
         sample();
         stringstream ss;
         if (allSamples) {
@@ -731,6 +889,8 @@ bool Sampler_t::recoverData(string dataDir) {
             }
             //recover data
             frames[u-1][t-1] = frame;
+            used_frames.insert(frame);
+
             fc_f[frame-1]++;
             for (unsigned int s=1; s<=S; ++s) {
                 fc_fsw[frame-1][s-1][w[u-1][t-1][s-1]-1]++;
@@ -783,6 +943,7 @@ bool Sampler_t::recoverData(string dataDir) {
             }
             //recover data
             roles[f-1][s-1] = role;
+            used_roles.insert(role);
         }
         if (s != S) {
             cout << "Wrong number of slots (line #" << f <<")." << endl;
@@ -803,7 +964,7 @@ bool Sampler_t::recoverData(string dataDir) {
     }
 
     cout << "...resampling phi and theta." << endl;
-    
+   
     initialize_post_phi();
     initialize_post_theta();
     initialize_post_omega();
@@ -814,3 +975,61 @@ bool Sampler_t::recoverData(string dataDir) {
     return true;
 }
 
+bool Sampler_t::createNewRole(unsigned int &role) {
+    if (!unused_roles.empty()) {
+        set<unsigned int>::iterator it = unused_roles.begin();
+        role = *it;
+        unused_roles.erase(it);
+    } else {
+        R++;
+        role = R;
+        post_theta = (double**) realloc(post_theta, sizeof(double*) * R);
+        post_theta[R-1] = (double*) malloc(sizeof(double) * (V + 1));
+        for (unsigned int v=1; v<=V; ++v) {
+            post_theta[R-1][v-1] = 0;
+        }
+        post_theta[R-1][V] = 0;
+
+        post_omega = (double*) realloc(post_omega, sizeof(double) * (R + 1));
+        post_omega[R] = post_omega[R-1];
+        post_omega[R-1] = 0;
+        
+    }
+
+    used_roles.insert(role);
+    
+    return true;
+}
+
+
+bool Sampler_t::createNewFrame(unsigned int &frame) {
+    if (!infinite_R && (used_frames.size() + 1 > pow(R,S))) {
+         return false; //too many frames
+    }
+
+    if (!unused_frames.empty()) {
+        set<unsigned int>::iterator it = unused_frames.begin();
+        frame = *it;
+        unused_frames.erase(it);
+    } else {
+        //TODO
+        return false;
+    }
+
+    used_frames.insert(frame);
+
+    if (!infinite_R) {
+        do {
+            for (unsigned int s=1; s<=S; ++s) {
+                roles[frame-1][s-1] = sample_MultSym(1, R);
+            }
+        } while (frameSet->inside(frameSet->makeKey(roles[frame-1])));
+        FrameKey_t fk = frameSet->makeKey(roles[frame-1]);
+        frameSet->insert(fk);
+    } else {
+        //TODO
+        return false;
+    }
+    
+    return true;
+}
