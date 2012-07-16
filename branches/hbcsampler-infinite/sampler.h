@@ -8,9 +8,11 @@
 #define _SAMPLER
 
 #include <vector>
-#include <string>
-#include "frames.h"
 #include <set>
+#include <map>
+#include <string>
+#include "antoniak.h"
+#include "frames.h"
 
 
 using namespace std;
@@ -50,8 +52,8 @@ public:
     bool recoverData(string dataDir);
 
     //infinite LDA-frames
-    bool createNewFrame(unsigned int &frame);
-    bool createNewRole(unsigned int &role);
+    unsigned int createNewFrame(vector<unsigned int> &frame);
+    unsigned int createNewRole(void);
 
     ~Sampler_t();
 
@@ -64,6 +66,7 @@ private:
     double alpha;
     double beta;
     double gamma;
+    //double delta;
 
     unsigned int** frames;
     unsigned int** roles;
@@ -86,6 +89,8 @@ private:
 
     //infinite LDA-frames
     set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
+    //map<unsigned int, double> tau;
+    //Antoniak_t antoniak;
 
     //sampling
     void resample_post_phi(void);
@@ -95,6 +100,8 @@ private:
     void resample_frames_inf(void);
     void resample_roles(void);
     void resample_roles_inf(void);
+    //void resample_tau(void);
+    bool sample_new_frame(vector<unsigned int> &frame);
     
 
 

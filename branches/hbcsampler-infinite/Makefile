@@ -4,7 +4,7 @@ CXXFLAGS = -g -Wall -pedantic
 
 LIBS = -lm -lboost_program_options
 
-OBJS := sampler.o samplib.o stats.o frames.o
+OBJS := sampler.o samplib.o stats.o antoniak.o frames.o
 #SRCS := samplib.c sampler.cc ldaframes-sampler.cc
 
 all: ldaframes-sampler
@@ -16,4 +16,4 @@ ldaframes-sampler: ldaframes-sampler.o $(OBJS)
 	${CXX} ${CXXFLAGS} -c $< 
 
 clean:
-	rm ldaframes-sampler.o samplib.o stats.o sampler.o frames.o ldaframes-sampler
+	rm ldaframes-sampler.o samplib.o stats.o antoniak.o sampler.o frames.o ldaframes-sampler
