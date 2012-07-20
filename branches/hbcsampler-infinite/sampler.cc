@@ -172,7 +172,8 @@ void Sampler_t::resample_frames_inf(void) {
                                 post_theta[roles[f-1][s-1]-1], 1, V);
                     }
                     //post_frames[f-1] = prod + ldf_Mult_smooth(0, alpha*tau[f], f, post_phi[u-1], 1, F);
-                    post_frames[f-1] = prod + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
+                    post_frames[f-1] = prod + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F, 
+                                       used_frames.size());
                 }
             }
             //sample new frame
@@ -201,7 +202,7 @@ void Sampler_t::resample_frames_inf(void) {
                 for (unsigned int s=1; s<=S; ++s) {
                     post_omega[roles[frames[u-1][t-1]-1][s-1]-1]--;
                     post_omega[R]--;
-                    if (post_omega[roles[frames[u-1][t-1]-1][s-1]-1] == 0) {
+                    if (post_omega[roles[frames[u-1][t-1]-1][s-1]-1] == 0 && infinite_R) {
                         unused_roles.insert(roles[frames[u-1][t-1]-1][s-1]);
                         used_roles.erase(roles[frames[u-1][t-1]-1][s-1]);
                     }
@@ -331,7 +332,7 @@ void Sampler_t::resample_roles_inf(void) {
                             post_theta[r-1], 1, V);
                     }
                     post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
-                        1, R);
+                        1, R, used_roles.size());
                 }
             }
 
@@ -528,6 +529,7 @@ bool Sampler_t::loadData(string inputFileName) {
     } else {
         cout << "R = " << R << endl;
     }
+
     
     if (F > pow(R, S)) {
         cout << "Number of frames (F) must be lower than or equal to the number of all " <<
@@ -677,7 +679,9 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         cout << "Iteration no. " << i;
         sample();
         cout << " (" << used_frames.size() << " frames, " 
-             << used_roles.size() << " roles)." << endl;
+             << used_roles.size() << " roles).";
+        cout << " Perplexity: " << perplexity();
+        cout << endl;
         stringstream ss;
         if (allSamples) {
             ss << i << "-";
@@ -1154,4 +1158,33 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
     frameSet->insert(fk);
     
     return frameId;
+}
+
+double Sampler_t::perplexity(void) {
+    double loglik = 0;
+    int words = 0;
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
+            for (unsigned int s=1; s<=S; ++s) {
+                words++;
+                double rsum = 0;
+                for (set<unsigned int>::const_iterator rit = used_roles.begin();
+                        rit != used_roles.end(); ++rit) {
+                    double fsum = 0;
+                    for (set<unsigned int>::const_iterator fit = used_frames.begin();
+                            fit != used_frames.end(); ++fit) {
+                        if ((roles[*fit-1][s-1]) == *rit) {
+                            fsum += (post_phi[u-1][*fit-1] + alpha)/
+                                    (post_phi[u-1][F] + used_frames.size()*alpha);
+                        }
+                    }
+                    rsum += fsum*(post_theta[*rit-1][w[u-1][t-1][s-1]] + beta)/
+                            (post_theta[*rit-1][V] + V*beta);
+                            
+                }
+                loglik += log(rsum);
+            }
+        }
+    }
+    return exp(-loglik/words);
 }

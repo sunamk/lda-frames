@@ -114,7 +114,7 @@ private:
     void initialize_post_omega(void);
     void initialize_infinite_vars(void);
 
-
+    double perplexity(void);
 };
 
 
