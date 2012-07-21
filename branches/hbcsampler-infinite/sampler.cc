@@ -22,7 +22,6 @@
 #include <boost/tokenizer.hpp>
 
 #include "sampler.h"
-#include "samplib.h"
 #include "stats.h"
 
 void Sampler_t::resample_post_phi(void) {
@@ -1165,24 +1164,14 @@ double Sampler_t::perplexity(void) {
     int words = 0;
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-            for (unsigned int s=1; s<=S; ++s) {
-                words++;
-                double rsum = 0;
-                for (set<unsigned int>::const_iterator rit = used_roles.begin();
-                        rit != used_roles.end(); ++rit) {
-                    double fsum = 0;
-                    for (set<unsigned int>::const_iterator fit = used_frames.begin();
-                            fit != used_frames.end(); ++fit) {
-                        if ((roles[*fit-1][s-1]) == *rit) {
-                            fsum += (post_phi[u-1][*fit-1] + alpha)/
+           unsigned int f = frames[u-1][t-1];
+           loglik += (post_phi[u-1][f-1] + alpha)/
                                     (post_phi[u-1][F] + used_frames.size()*alpha);
-                        }
-                    }
-                    rsum += fsum*(post_theta[*rit-1][w[u-1][t-1][s-1]] + beta)/
-                            (post_theta[*rit-1][V] + V*beta);
-                            
-                }
-                loglik += log(rsum);
+            for (unsigned int s=1; s<=S; ++s) {
+                unsigned int r = roles[f-1][s-1];
+                words++;
+                loglik += (post_theta[r-1][w[u-1][t-1][s-1]] + beta)/
+                            (post_theta[r-1][V] + V*beta);
             }
         }
     }

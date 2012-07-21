@@ -1826,9 +1826,9 @@ void setgmn(double *meanv,double *covm,long p,double *parm)
 **********************************************************************
 */
 {
-static long T1;
+//static long T1;
 static long i,icount,info,j,D2,D3,D4,D5;
-    T1 = p*(p+3)/2+1;
+    //T1 = p*(p+3)/2+1;
 /*
      TEST THE INPUT
 */

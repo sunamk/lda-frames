@@ -31,7 +31,7 @@ void   sample_NorMV(double*x, double*mu, double si2, int lo, int hi);
 double sample_Exp(double la);
 void   sample_Delta(double*dst, double*src, int hi);
 double sample_Unif(double lo, double hi);
-void   sample_PY(double*pi, double alpha, double delta, int K, double*counts, int*Knew, double**pinew);
+//void   sample_PY(double*pi, double alpha, double delta, int K, double*counts, int*Knew, double**pinew);
 
 int    mode_Poi(double mu);
 int    mode_MultSym(int lo, int hi);
@@ -117,7 +117,7 @@ double**  log_vec_2 (double**  res, double**  vec, int lo1, int hi1, int lo2, in
 double*** log_vec_3 (double*** res, double*** vec, int lo1, int hi1, int lo2, int hi2, int lo3, int hi3);
 
 double sqrDiff(double*   a, double*   b, int lo1, int hi1);
-
+/*
 
 int*     load_discrete1(char*fname, int*dim, int*max);
 int**    load_discrete2(char*fname, int*dim1, int**dim2, int*max);
@@ -125,5 +125,5 @@ unsigned int***   load_discrete3(const char*fname, unsigned int*dim1, unsigned i
 int****  load_discrete4(char*fname, int*dim1, int**dim2, int***dim3, int****dim4, int*max);
 double** load_matrix(char*fname, int*N, int*dim);
 int**    load_matrix_int(char*fname, int*N, int*dim);
-
+*/
 #endif

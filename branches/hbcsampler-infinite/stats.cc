@@ -145,6 +145,7 @@ double sample_Unif(double lo, double hi) {
 // items, which means that it's a vector of length K+2 (the last
 // position is used to store the sum of pi).  counts will be a vector
 // over K+1 items, which means it will also have K+2 elements.
+/*
 void   sample_PY(double*pi, double alpha, double delta, int K, double*counts, int*Knew, double**pinew) {
   // this is just like a dirichlet sample, but with (a) discounting
   // and (b) variable number of clusters we end up sampling from
@@ -201,7 +202,7 @@ void   sample_PY(double*pi, double alpha, double delta, int K, double*counts, in
     *pinew = pi;
   }
 }
-
+*/
 
 /* mode functions */
 
@@ -505,7 +506,7 @@ int** load_matrix_int(char*fname, int*N, int*dim) {
 
   return x;
 }
-
+/*
 int* load_discrete1(char*fname, int*dim, int*max) {
   FILE *f;
   int*x;
@@ -705,19 +706,6 @@ unsigned int*** load_discrete3(const char*fname, unsigned int*dim1, unsigned int
   }
   fclose(f);
 
-  /*
-  fprintf(stderr,"\n\nx=\n");
-  for (k=0; k<*dim1; k++) {
-    for (i=0; i<(*dim2)[k]; i++) {
-      for (j=0; j<(*dim3)[k][i]; j++) {
-        fprintf(stderr,"%d ", x[k][i][j]);
-      }
-      fprintf(stderr,"\t");
-    }
-    fprintf(stderr,"\n");
-  }
-  */
-
   return x;
 }
 
@@ -870,24 +858,9 @@ int**** load_discrete4(char*fname, int*dim1, int**dim2, int***dim3, int****dim4,
   }
   fclose(f);
 
-  /*
-  fprintf(stderr,"\n\nx=\n");
-  for (k=0; k<*dim1; k++) {
-    for (i=0; i<(*dim2)[k]; i++) {
-      for (j=0; j<(*dim3)[k][i]; j++) {
-        for (l=0; l<(*dim4)[k][i][j]; l++) {
-          fprintf(stderr,"%d ", x[k][i][j][l]);
-        }
-        fprintf(stderr,"#");
-      }
-      fprintf(stderr,"\t");
-    }
-    fprintf(stderr,"\n");
-  }
-  */
   return x;
 }
-
+*/
 
 double*   IDR(double*res, int pos, int lo, int hi) {
   int i;
