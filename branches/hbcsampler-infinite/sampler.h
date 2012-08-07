@@ -23,8 +23,10 @@ public:
               unsigned int _R,
               float _alpha,
               float _beta,
-              float _gamma): F(_F), R(_R), S(0), U(0), V(0),
+              float _gamma,
+              float _delta): F(_F), R(_R), S(0), U(0), V(0),
                             alpha(_alpha), beta(_beta), gamma(_gamma),
+                            delta(_delta),
                             infinite_F(false), infinite_R(false),
                             startIter(1), initialized(false)
                             {};
@@ -53,6 +55,7 @@ public:
 
     //infinite LDA-frames
     unsigned int createNewFrame(vector<unsigned int> &frame);
+    //unsigned int createNewFrame(vector<unsigned int> &frame);
     unsigned int createNewRole(void);
 
     ~Sampler_t();
@@ -66,7 +69,7 @@ private:
     double alpha;
     double beta;
     double gamma;
-    //double delta;
+    double delta;
 
     unsigned int** frames;
     unsigned int** roles;
@@ -89,8 +92,8 @@ private:
 
     //infinite LDA-frames
     set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
-    //map<unsigned int, double> tau;
-    //Antoniak_t antoniak;
+    map<unsigned int, double> tau;
+    Antoniak_t antoniak;
 
     //sampling
     void resample_post_phi(void);
@@ -101,7 +104,7 @@ private:
     void resample_roles(void);
     void resample_roles_inf(void);
     void resample_tau(void);
-    bool sample_new_frame(vector<unsigned int> &frame);
+    bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
     
 
 
