@@ -69,6 +69,7 @@ void Sampler_t::resample_tau(void) {
     unsigned int id = 0;
     double* fc = (double*) malloc(sizeof(double) * (used_frames.size() + 1));
     double* dirs = (double*) malloc(sizeof(double) * (used_frames.size() + 2));
+    tables = 0;
     for(set<unsigned int>::const_iterator it = used_frames.begin(); it != used_frames.end(); ++it) {
         idmap.push_back(*it);
         fc[id] = 0;
@@ -80,6 +81,7 @@ void Sampler_t::resample_tau(void) {
                 fc[id] += post_phi[u-1][*it-1];
             }
         }
+        tables += fc[id];
         id++;
     }    
     fc[used_frames.size()] = delta;
@@ -403,6 +405,32 @@ void Sampler_t::resample_roles_inf(void) {
     }
 }
 
+void Sampler_t::resample_hypers(void) {
+    cout << "Sampling hyperparameters..." << endl;
+    double bdelta = 5;
+    double adelta = 0.1;
+    double aalpha = 5;
+    double balpha = 5.1;
+
+    for (unsigned int iters=0; iters<10; iters++) {
+        //sample delta
+        double eta = sample_Bet(delta+1, tables);
+        double bloge = bdelta - log(eta);
+        double pie = 1.0 / (1.0-(tables*bloge/(delta+used_frames.size()-1)));
+        int u = sample_Bern(pie);
+        delta = sample_Gam(adelta+used_frames.size()-1+u, 1.0/bloge);
+
+        //sample alpha
+        double qs = 0;
+        double qw = 0;
+        for (unsigned int u=1; u<=U; ++u) {
+            qs += sample_Bern(w[u-1].size() / (w[u-1].size() + alpha));
+            qw += log(sample_Bet(alpha+1, w[u-1].size()));
+        }
+        alpha = sample_Gam(aalpha + tables - qs, 1.0/(balpha - qw));
+    }
+    cout << "...alpha = " << alpha << ", delta = " << delta << endl;
+}
 
 
 void Sampler_t::initialize_frames(void) {
@@ -651,10 +679,11 @@ void Sampler_t::sample(void) {
     if (infinite_F) {
         resample_frames_inf();
         resample_tau();
+        /*
         for (set<unsigned int>::iterator it=used_frames.begin(); it!= used_frames.end(); ++it) {
         cout << tau[*it] << " ";
     }
-    cout << tau[0] << endl;
+    cout << tau[0] << endl;*/
         return;
     } else {
         resample_frames();
@@ -704,10 +733,17 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
     for (unsigned int i = startIter; i < iters+1; ++i) {
         cout << "Iteration no. " << i;
         sample();
+
         cout << " (" << used_frames.size() << " frames, " 
              << used_roles.size() << " roles).";
         cout << " Perplexity: " << perplexity();
         cout << endl;
+        /*
+        if (i>100 && infinite_F) {
+            resample_hypers();
+        }*/
+
+
         stringstream ss;
         if (allSamples) {
             ss << i << "-";

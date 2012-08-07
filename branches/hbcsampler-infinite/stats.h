@@ -31,6 +31,7 @@ void   sample_NorMV(double*x, double*mu, double si2, int lo, int hi);
 double sample_Exp(double la);
 void   sample_Delta(double*dst, double*src, int hi);
 double sample_Unif(double lo, double hi);
+int    sample_Bern(double a);
 //void   sample_PY(double*pi, double alpha, double delta, int K, double*counts, int*Knew, double**pinew);
 
 int    mode_Poi(double mu);

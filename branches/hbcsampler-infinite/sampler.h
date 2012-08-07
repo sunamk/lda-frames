@@ -94,6 +94,7 @@ private:
     set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
     map<unsigned int, double> tau;
     Antoniak_t antoniak;
+    unsigned int tables;
 
     //sampling
     void resample_post_phi(void);
@@ -104,6 +105,7 @@ private:
     void resample_roles(void);
     void resample_roles_inf(void);
     void resample_tau(void);
+    void resample_hypers(void);
     bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
     
 

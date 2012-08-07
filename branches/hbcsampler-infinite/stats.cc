@@ -43,6 +43,15 @@ inline int sample_Poi(double mu) {
   return (int)ignpoi(mu);
 }
 
+int sample_Bern(double a) {
+    double r = ranf();
+    if (r < a) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 // unsigned int sample_MultSym(unsigned int lo, unsigned int hi) {
 //  return lo + (unsigned int)(ranf() * (double)(hi-lo+1));
 //}
