@@ -367,11 +367,6 @@ void Sampler_t::resample_roles_inf(void) {
             
             normalizeLog(post_roles, 1, R + 1);
 
-            //for (unsigned int i = 0; i < R + 1; ++i) {
-            //    cout << post_roles[i] << " ";
-            //}
-            //cout << endl;
-
             unsigned int newRole = sample_Mult(post_roles, 1, R + 1);
 
             //not necessarily
@@ -1170,33 +1165,6 @@ unsigned int Sampler_t::createNewRole(void) {
     return role;
 }
 
-/*
-bool Sampler_t::sample_new_frame(vector<unsigned int> &frame) {
-    //if (used_frames.size() + 1 > pow(used_roles.size(),S)) {
-    //     return false; //too many frames
-    //}
-   
-    //TODO Do it more efficient!!! Just for testing purposes.
-    //do {
-        for (unsigned int s=1; s<=S; ++s) {
-            unsigned int id = sample_MultSym(1, used_roles.size()+1);
-            set<unsigned int>::const_iterator it = used_roles.begin();
-            advance(it, id-1);
-            if (id == used_roles.size()+1) {
-                frame[s-1] = createNewRole(); 
-            } else {
-                frame[s-1] = *it;
-            }
-        }
-    //} while (frameSet->inside(frameSet->makeKey(&frame[0])));
-    if(frameSet->inside(frameSet->makeKey(&frame[0]))) return false;
-    //for (unsigned s=1; s<=S; ++s) {
-    //    cout << frame[s-1] << ", ";
-    //}
-    //cout << endl;
-
-    return true;
-}*/
 
 bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos) {
     for (unsigned int s=1; s<=S; ++s) {
@@ -1220,16 +1188,6 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
             frame[s-1] = newRole;
         }
 
-
-        /*
-        unsigned int id = sample_MultSym(1, used_roles.size()+1);
-        set<unsigned int>::const_iterator it = used_roles.begin();
-        advance(it, id-1);
-        if (id == used_roles.size()+1) {
-            frame[s-1] = createNewRole(); 
-        } else {
-            frame[s-1] = *it;
-        }*/
         free(post_roles);
     }
 
@@ -1289,13 +1247,13 @@ double Sampler_t::perplexity(void) {
                           log(post_theta[r-1][V] + V*beta);
             }
         }
-    }/*
+    }
     for (set<unsigned int>::const_iterator fit=used_frames.begin(); fit!=used_frames.end(); ++fit) {
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
             loglik += log(post_omega[*rit-1]+gamma) -
                       log(post_omega[R]+used_roles.size()*gamma); 
         }
-    }*/
+    }
     return exp(-loglik/words);
 }
 
