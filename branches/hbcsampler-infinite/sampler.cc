@@ -90,12 +90,6 @@ void Sampler_t::resample_tau(void) {
         tau[idmap[i]] = dirs[i];
     }
     tau[0] = dirs[used_frames.size()]; 
-    /*
-    cout << endl;
-    for (set<unsigned int>::iterator it=used_frames.begin(); it!= used_frames.end(); ++it) {
-        cout << "(" << *it << ", " << tau[*it] << ") ";
-    }
-    cout << "(new, " << tau[0] << ")" << endl;*/
     free(fc);
     free(dirs);
 }
@@ -175,6 +169,7 @@ void Sampler_t::resample_frames_inf(void) {
 
                 //probability of used frames
                 if (it != used_frames.end()) {
+
                     for (unsigned int s = 1; s <= S; ++s) {
                         prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
                                 post_theta[roles[f-1][s-1]-1], 1, V);
@@ -190,8 +185,9 @@ void Sampler_t::resample_frames_inf(void) {
             } else {
                 double prod = log(alpha*tau[0]);
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
-                        post_theta[frame[s-1]-1], 1, V);
+                    //prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
+                    //    post_theta[frame[s-1]-1], 1, V);
+                    prod -= log(V);
                 }
                 post_frames[F] = prod;
             }
@@ -200,11 +196,9 @@ void Sampler_t::resample_frames_inf(void) {
 
             //sample frame id
             unsigned int newFrame = sample_Mult(post_frames, 1, F + 1);
-
+            
             //free unused frames and roles
             if (frames[u-1][t-1] != newFrame && frames[u-1][t-1] != 0 && fc_f[frames[u-1][t-1]-1] == 0) {
-                unused_frames.insert(frames[u-1][t-1]);
-                used_frames.erase(frames[u-1][t-1]);
                 frameSet->remove(frameSet->makeKey(roles[frames[u-1][t-1]-1]));
                 for (unsigned int s=1; s<=S; ++s) {
                     post_omega[roles[frames[u-1][t-1]-1][s-1]-1]--;
@@ -214,28 +208,36 @@ void Sampler_t::resample_frames_inf(void) {
                         used_roles.erase(roles[frames[u-1][t-1]-1][s-1]);
                     }
                 }
+                unused_frames.insert(frames[u-1][t-1]);
+                used_frames.erase(frames[u-1][t-1]);
                 tau_needs_resampling = true;
                 tau.erase(frames[u-1][t-1]);
             }
 
             //create a new frame if required
-                if (newFrame == F + 1) {
-                    frames[u-1][t-1] = createNewFrame(frame);
-                    tau[frames[u-1][t-1]] = tau[0];
-                    tau_needs_resampling = true;
-                    post_frames = (double*) realloc(post_frames, sizeof(double) * (F + 2)); 
-                } else {
-                    frames[u-1][t-1] = newFrame;
+            if (newFrame == F + 1) {
+                if (frames[u-1][t-1]==0 && u==1 && t==1) {
+                    used_frames.erase(1);
+                    unused_frames.insert(1);
+                    post_omega[0] -= 2;
+                }
+                frames[u-1][t-1] = createNewFrame(frame);
+                tau[frames[u-1][t-1]] = tau[0];
+                tau_needs_resampling = true;
+                post_frames = (double*) realloc(post_frames, sizeof(double) * (F + 2));
+                //resample_roles_inf();
+            } else {
+                frames[u-1][t-1] = newFrame;
             
-                    //remove possibly new roles of the unused new frame
-                    //cout << endl;
-                    for (unsigned int s=1; s<=S; ++s) {
-                        if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0) {
-                            used_roles.erase(frame[s-1]);
-                            unused_roles.insert(frame[s-1]);
-                        }
+                //remove possibly new roles of the unused new frame
+                for (unsigned int s=1; s<=S; ++s) {
+                    if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0) {
+                        used_roles.erase(frame[s-1]);
+                        unused_roles.insert(frame[s-1]);
                     }
                 }
+            }
+            
 
             //update new values
             for (unsigned int s=1; s<=S; ++s) {
@@ -350,8 +352,9 @@ void Sampler_t::resample_roles_inf(void) {
                         prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta, v, 
                             post_theta[r-1], 1, V);
                     }
-                    post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
-                        1, R, used_roles.size());
+                    //post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
+                    //    1, R, used_roles.size());
+                    post_roles[r-1] = prod + log(post_omega[r-1] + gamma);
                 }
             }
 
@@ -574,7 +577,8 @@ bool Sampler_t::loadData(string inputFileName) {
     }
     if (R == 0) {
         infinite_R = true;
-        R = floor(exp(log(F)/S)) + 1; //minimum number of roles
+        //R = floor(exp(log(F)/S)) + 1; //minimum number of roles
+        R = ceil(exp(log(F)/S)); //minimum number of roles
         cout << "R = automatic (min. " << R << ")" << endl;
     } else {
         cout << "R = " << R << endl;
@@ -678,13 +682,6 @@ Sampler_t::~Sampler_t() {
 void Sampler_t::sample(void) {
     if (infinite_F) {
         resample_frames_inf();
-        resample_tau();
-        /*
-        for (set<unsigned int>::iterator it=used_frames.begin(); it!= used_frames.end(); ++it) {
-        cout << tau[*it] << " ";
-    }
-    cout << tau[0] << endl;*/
-        return;
     } else {
         resample_frames();
     }
@@ -693,9 +690,13 @@ void Sampler_t::sample(void) {
     } else {
         resample_roles();
     }
+    if (!infinite_F) {
+        resample_tau();
+    }
 }
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
+
     if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     int status = mkdir(outputDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
@@ -755,6 +756,7 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
             return false;
         }
     }
+    
     return true;
 }
 
@@ -1165,7 +1167,6 @@ unsigned int Sampler_t::createNewRole(void) {
     }
 
     used_roles.insert(role);
-    
     return role;
 }
 
@@ -1206,7 +1207,8 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
             if (it != used_roles.end()) {
                 post_roles[r-1] = 
                     ldf_Mult_smooth(1, beta, pos[s-1], post_theta[r-1], 1, V) +
-                    ldf_Mult_smooth(0, gamma, r, post_omega, 1, R, used_roles.size());
+                    log(gamma + post_omega[r-1]);
+                    //ldf_Mult_smooth(0, gamma, r, post_omega, 1, R, used_roles.size());
             }
         }
         post_roles[R] = log(gamma) - log(V);
@@ -1278,15 +1280,22 @@ double Sampler_t::perplexity(void) {
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
            unsigned int f = frames[u-1][t-1];
-           loglik += (post_phi[u-1][f-1] + alpha)/
-                                    (post_phi[u-1][F] + used_frames.size()*alpha);
-            for (unsigned int s=1; s<=S; ++s) {
+           loglik += log(post_phi[u-1][f-1] + alpha) -
+                     log(post_phi[u-1][F] + used_frames.size()*alpha);
+           for (unsigned int s=1; s<=S; ++s) {
                 unsigned int r = roles[f-1][s-1];
                 words++;
-                loglik += (post_theta[r-1][w[u-1][t-1][s-1]] + beta)/
-                            (post_theta[r-1][V] + V*beta);
+                loglik += log(post_theta[r-1][w[u-1][t-1][s-1]] + beta) -
+                          log(post_theta[r-1][V] + V*beta);
             }
+        }
+    }
+    for (set<unsigned int>::const_iterator fit=used_frames.begin(); fit!=used_frames.end(); ++fit) {
+        for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
+            loglik += log(post_omega[*rit-1]+gamma) -
+                      log(post_omega[R]+used_roles.size()*gamma); 
         }
     }
     return exp(-loglik/words);
 }
+

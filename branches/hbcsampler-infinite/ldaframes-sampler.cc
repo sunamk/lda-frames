@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     unsigned int frames = 0;
     unsigned int roles = 0;
     unsigned int iters = 1000;
-    float alpha = 10;
+    float alpha = 5.0;
     float beta = 0.1;
     float gamma = 0.1;
     float delta = 1.5;
