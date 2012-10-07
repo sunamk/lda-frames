@@ -1289,13 +1289,13 @@ double Sampler_t::perplexity(void) {
                           log(post_theta[r-1][V] + V*beta);
             }
         }
-    }
+    }/*
     for (set<unsigned int>::const_iterator fit=used_frames.begin(); fit!=used_frames.end(); ++fit) {
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
             loglik += log(post_omega[*rit-1]+gamma) -
                       log(post_omega[R]+used_roles.size()*gamma); 
         }
-    }
+    }*/
     return exp(-loglik/words);
 }
 
