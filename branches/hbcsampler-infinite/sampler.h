@@ -109,10 +109,6 @@ private:
     bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
 
 
-    void countRoles(void);
-    
-
-
     //inititalization
     bool initialized;
     void initialize_frames(void);
