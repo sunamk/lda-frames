@@ -61,40 +61,41 @@ public:
     ~Sampler_t();
 
 private:
-    unsigned int F;
-    unsigned int R;
-    unsigned int S;
-    unsigned int U;
-    unsigned int V;
-    double alpha;
-    double beta;
-    double gamma;
-    double delta;
+    unsigned int F;             //
+    unsigned int R;             //
+    unsigned int S;             //
+    unsigned int U;             //
+    unsigned int V;             //
+    double alpha;               //
+    double beta;                //
+    double gamma;               //
+    double delta;               //
 
-    unsigned int** frames;
-    unsigned int** roles;
+    unsigned int** frames;      //
+    unsigned int** roles;       //
 
-    double** post_phi;
-    double** post_theta;
-    double* post_omega;
+    double** post_phi;          //
+    double** post_theta;        //
+    double* post_omega;         //
 
-    bool infinite_F;
-    bool infinite_R;
+    bool infinite_F;            //
+    bool infinite_R;            //
 
-    Frames_t *frameSet;
+    Frames_t *frameSet;         //
 
-    string inputFile;
-    unsigned int startIter;
+    string inputFile;           //
+    unsigned int startIter;     //
   
-    vector<vector<vector<unsigned int> > > w;//inputData;
-    vector<unsigned int> fc_f;
-    vector<vector<vector<unsigned int> > > fc_fsw;
+    vector<vector<vector<unsigned int> > > w;//inputData;                 //
+    vector<unsigned int> fc_f;                                            //
+    vector<vector<vector<unsigned int> > > fc_fsw;                        //
 
     //infinite LDA-frames
-    set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
+    set<unsigned int> unused_frames, used_frames, unused_roles, used_roles; //
     map<unsigned int, double> tau;
     Antoniak_t antoniak;
     unsigned int tables;
+    void pack_FR(void);
 
     //sampling
     void resample_post_phi(void);

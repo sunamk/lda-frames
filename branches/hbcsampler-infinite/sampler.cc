@@ -58,6 +58,12 @@ void Sampler_t::resample_post_theta(void) {
 void Sampler_t::resample_post_omega(void) {
     for (unsigned int f = 1; f <= F; ++f) {
         for (unsigned int s = 1; s <= S; ++s) {
+             post_omega[roles[f-1][s-1]-1] = 0;
+        }
+    }
+    post_omega[R] = 0;
+    for (unsigned int f = 1; f <= F; ++f) {
+        for (unsigned int s = 1; s <= S; ++s) {
             post_omega[roles[f-1][s-1]-1]++;
             post_omega[R]++;
         }
@@ -744,6 +750,11 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         if (allSamples) {
             ss << i << "-";
         }
+        
+        if(infinite_F || infinite_R) {
+            pack_FR();
+        }
+
         if (!dump(outputDir + ss.str())) {
             return false;
         }
@@ -1257,3 +1268,73 @@ double Sampler_t::perplexity(void) {
     return exp(-loglik/words);
 }
 
+void Sampler_t::pack_FR(void) {
+
+    //pack frames and roles    
+    map<unsigned int, unsigned int> tmp_F, tmp_R;
+    unsigned int f=0, r=0;
+    for (set<unsigned int>::const_iterator it=used_frames.begin();
+            it!= used_frames.end(); ++it) {
+        tmp_F[*it] = ++f;
+    }
+    for (set<unsigned int>::const_iterator it=used_roles.begin();
+            it!= used_roles.end(); ++it) {
+        tmp_R[*it] = ++r;
+    }
+    for(unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
+            frames[u-1][t-1] = tmp_F[frames[u-1][t-1]];
+        }
+    }
+    unsigned int** tmp_roles; 
+    fc_f.clear();
+    fc_fsw.clear();
+    tmp_roles = (unsigned int**) malloc(sizeof(unsigned int*) * used_frames.size());
+    for (unsigned int f=1; f<=used_frames.size(); ++f) {
+        tmp_roles[f-1] = (unsigned int*) malloc(sizeof(unsigned int) * S);
+        fc_f.push_back(0);
+        fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
+    }
+
+    map<unsigned int, double> tmp_tau;
+    tmp_tau[0] = F;
+    frameSet->clear();
+    for (set<unsigned int>::const_iterator it = used_frames.begin(); it != used_frames.end(); ++it) {
+        tmp_tau[tmp_F[*it-1]] = tau[*it];
+        for (unsigned int s=1; s<=S; ++s) {
+            tmp_roles[tmp_F[*it]-1][s-1] = tmp_R[roles[*it-1][s-1]];
+        }
+        frameSet->insert(frameSet->makeKey(tmp_roles[tmp_F[*it]-1]));
+    }
+    tau = tmp_tau;
+
+    for (unsigned int f=1; f<=F; ++f) {
+        free(roles[f-1]);
+    }
+    free(roles);
+    roles = tmp_roles;
+    
+    for(unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
+            fc_f[frames[u-1][t-1]-1]++;
+            for (unsigned int s=1; s<=S; ++s) {
+                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+            }
+        }
+    }
+
+    //reduce number of frames and roles
+    F = used_frames.size();
+    R = used_roles.size();
+    unused_frames.clear();
+    unused_roles.clear();
+    used_frames.clear();
+    used_roles.clear();
+    for (unsigned int f=1; f<=F; ++f) used_frames.insert(f);
+    for (unsigned int r=1; r<=R; ++r) used_roles.insert(r);
+
+    resample_post_phi();
+    resample_post_theta();
+    resample_post_omega();
+
+}

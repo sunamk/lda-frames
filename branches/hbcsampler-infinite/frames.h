@@ -29,6 +29,8 @@ public:
 
     static void printKey(FrameKey_t k);
 
+    void clear(void);
+
     
 private:
     unsigned int S;

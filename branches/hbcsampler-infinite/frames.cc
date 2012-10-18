@@ -48,3 +48,7 @@ void Frames_t::printKey(FrameKey_t k) {
     }
     std::cout << std::endl;
 }
+
+void Frames_t::clear(void) {
+    frameSet.clear();
+}
