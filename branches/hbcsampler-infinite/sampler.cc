@@ -1246,6 +1246,7 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
 double Sampler_t::perplexity(void) {
     double loglik = 0;
     int words = 0;
+    /*
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
            unsigned int f = frames[u-1][t-1];
@@ -1263,6 +1264,22 @@ double Sampler_t::perplexity(void) {
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
             loglik += log(post_omega[*rit-1]+gamma) -
                       log(post_omega[R]+used_roles.size()*gamma); 
+        }
+    }*/
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
+            double tmp = 0;
+            for (set<unsigned int>::const_iterator f =used_frames.begin(); f!=used_frames.end(); ++f) {
+                double tmp2 = (post_phi[u-1][*f-1] + alpha)/(post_phi[u-1][F] + used_frames.size()*alpha);
+                for (unsigned int s=1; s<=S; ++s) {
+                    unsigned int r = roles[*f-1][s-1];
+                    words++;
+                    tmp2 *= (post_theta[r-1][w[u-1][t-1][s-1]] + beta)/(post_theta[r-1][V] + V*beta);
+                }
+                tmp += tmp2;
+            
+            }            
+            loglik += log(tmp);
         }
     }
     return exp(-loglik/words);
