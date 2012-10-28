@@ -712,14 +712,8 @@ void Sampler_t::sample(void) {
     if (!infinite_F) {
         resample_tau();
     }
-    /*
-    for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
-        cout << endl;
-        for (unsigned int v=0; v<=V; ++v) {
-            cout << beta[*rit-1][v] << " ";
-        }
-        cout << endl;
-    }*/
+
+    resample_beta(20);
 }
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
@@ -776,7 +770,6 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         if (allSamples) {
             ss << i << "-";
         }
-        
         if(infinite_F || infinite_R) {
             pack_FR();
         }
@@ -1185,6 +1178,7 @@ unsigned int Sampler_t::createNewRole(void) {
     } else {
         R++;
         role = R;
+        beta.push_back((double *) malloc(sizeof(double) * (V + 1)));
         post_theta = (double**) realloc(post_theta, sizeof(double*) * R);
         post_theta[R-1] = (double*) malloc(sizeof(double) * (V + 1));
         for (unsigned int v=1; v<=V; ++v) {
@@ -1197,6 +1191,8 @@ unsigned int Sampler_t::createNewRole(void) {
         post_omega[R-1] = 0;
         
     }
+    beta[role-1][0] = V*beta0;
+    for (unsigned int v=1; v<=V; ++v) beta[role-1][v] = beta0;
 
     used_roles.insert(role);
     return role;
@@ -1310,6 +1306,25 @@ double Sampler_t::perplexity(void) {
         }
     }
     return exp(-loglik/words);
+}
+
+void Sampler_t::resample_beta(unsigned int iters) {
+    for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
+        for (unsigned int v=1; v<=V; ++v) {
+            for (unsigned int iter = 0; iter < iters; ++iter) {
+                double oldBeta = beta[*rit-1][v];
+                beta[*rit-1][v] = max(
+                    beta[*rit-1][v]*
+                    (digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v])-digamma(beta[*rit-1][v]))/
+                    (digamma(post_theta[*rit-1][V]+beta[*rit-1][0])-digamma(beta[*rit-1][0])),
+                    beta0);
+                if (post_theta[*rit-1][V] == 0) beta[*rit-1][v] = beta0;
+                beta[*rit-1][0] += beta[*rit-1][v] - oldBeta; 
+            }
+        
+        }
+    }
+    
 }
 
 void Sampler_t::pack_FR(void) {
