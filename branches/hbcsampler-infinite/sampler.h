@@ -25,7 +25,7 @@ public:
               float _beta,
               float _gamma,
               float _delta): F(_F), R(_R), S(0), U(0), V(0),
-                            alpha(_alpha), beta(_beta), gamma(_gamma),
+                            alpha(_alpha), beta0(_beta), gamma(_gamma),
                             delta(_delta),
                             infinite_F(false), infinite_R(false),
                             startIter(1), initialized(false)
@@ -67,7 +67,8 @@ private:
     unsigned int U;             //
     unsigned int V;             //
     double alpha;               //
-    double beta;                //
+    double beta0;               //
+    vector<double *> beta;
     double gamma;               //
     double delta;               //
 
@@ -114,6 +115,7 @@ private:
     bool initialized;
     void initialize_frames(void);
     void initialize_roles(void);
+    void initialize_beta(void);
     void initialize_post_phi(void);
     void initialize_post_theta(void);
     void initialize_post_omega(void);

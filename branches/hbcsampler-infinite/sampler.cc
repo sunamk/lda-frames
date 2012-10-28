@@ -122,7 +122,7 @@ void Sampler_t::resample_frames(void) {
                 double prod = 0;
                 post_frames[f-1] = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
+                    prod += ldf_Mult_smooth(1, beta[roles[f-1][s-1]-1], w[u-1][t-1][s-1],
                             post_theta[roles[f-1][s-1]-1], 1, V);
                 }
                 post_frames[f-1] = prod + ldf_Mult_smooth(0, alpha, f, post_phi[u-1], 1, F);
@@ -177,7 +177,7 @@ void Sampler_t::resample_frames_inf(void) {
                 if (it != used_frames.end()) {
 
                     for (unsigned int s = 1; s <= S; ++s) {
-                        prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
+                        prod += ldf_Mult_smooth(1, beta[roles[f-1][s-1]-1], w[u-1][t-1][s-1],
                                 post_theta[roles[f-1][s-1]-1], 1, V);
                     }
                     post_frames[f-1] = prod + ldf_Mult_smooth(0, alpha*tau[f], f, post_phi[u-1], 1, F, 
@@ -191,7 +191,7 @@ void Sampler_t::resample_frames_inf(void) {
             } else {
                 double prod = log(alpha*tau[0]);
                 for (unsigned int s = 1; s <= S; ++s) {
-                    //prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1],
+                    //prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1], opravit betu
                     //    post_theta[frame[s-1]-1], 1, V);
                     prod -= log(V);
                 }
@@ -287,7 +287,7 @@ void Sampler_t::resample_roles(void) {
                 bool inside = frameSet->inside(newFrame);
                 if (newFrame == oldFrame || !inside) {
                     for (unsigned int v = 1; v<=V; ++v) {
-                        prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta, v, 
+                        prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta[r-1], v, 
                             post_theta[r-1], 1, V);
                     }
                     post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
@@ -355,7 +355,7 @@ void Sampler_t::resample_roles_inf(void) {
                 //probability of used roles
                 if ((newFrame == oldFrame || !inside) && it != used_roles.end()) {
                     for (unsigned int v = 1; v<=V; ++v) {
-                        prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta, v, 
+                        prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta[r-1], v, 
                             post_theta[r-1], 1, V);
                     }
                     //post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
@@ -477,6 +477,15 @@ void Sampler_t::initialize_post_phi(void) {
     }
 }
 
+void Sampler_t::initialize_beta(void) {
+    for (unsigned int r=0; r<R; ++r) {
+        beta[r][0]=V*beta0;
+        for (unsigned int v = 1; v<=V; ++v) {
+            beta[r][v] = beta0;
+        }
+    }
+}
+
 
 
 void Sampler_t::initialize_post_theta(void) {
@@ -595,7 +604,7 @@ bool Sampler_t::loadData(string inputFileName) {
     frameSet = new Frames_t(S);
 
     cout << "alpha = " << alpha << endl;
-    cout << "beta = " << beta << endl;
+    cout << "beta0 = " << beta0 << endl;
     cout << "gamma = " << gamma << endl;
     cout << "delta = " << delta << endl;
     cout << "Lexical units = " << U << endl;
@@ -630,12 +639,17 @@ bool Sampler_t::initialize(bool recovery) {
     post_theta = (double**) malloc(sizeof(double*) * R);
     for (unsigned int r=1; r<=R; ++r) {
         post_theta[r-1] = (double*) malloc(sizeof(double) * (V + 1));
-    }    
+    }
+
+    for (unsigned int r=0; r<R; ++r) {
+        beta.push_back((double*) malloc(sizeof(double) * (V + 1)));
+    } 
     
     post_omega = (double*) malloc(sizeof(double) * (R +1));
     
     if (!recovery) {
         cout << "Initializing variables..." << endl;
+        initialize_beta();
         initialize_frames();
         initialize_roles();
         initialize_infinite_vars();
@@ -675,6 +689,10 @@ Sampler_t::~Sampler_t() {
         free(frames);
 
         delete frameSet;
+        
+        for (unsigned int r=0; r<R; ++r) {
+            free(beta[r]);
+        } 
     }
 
 }
@@ -694,6 +712,14 @@ void Sampler_t::sample(void) {
     if (!infinite_F) {
         resample_tau();
     }
+    /*
+    for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
+        cout << endl;
+        for (unsigned int v=0; v<=V; ++v) {
+            cout << beta[*rit-1][v] << " ";
+        }
+        cout << endl;
+    }*/
 }
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
@@ -817,7 +843,7 @@ bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aite
     lfile << "Number of roles:\t" << R << endl;
     lfile << "Number of slots:\t" << S << endl;
     lfile << "Alpha:\t" << alpha << endl;
-    lfile << "Beta:\t" << beta << endl;
+    lfile << "Beta0:\t" << beta0 << endl;
     lfile << "Gamma:\t" << gamma << endl;
     lfile << "Delta:\t" << delta << endl;
     lfile << "Required number of iterations:\t" << aiter << endl;
@@ -970,10 +996,10 @@ bool Sampler_t::recoverParameters(string logDir) {
                     return false;
                 }
             }
-            if (lineItems.at(0) == "Beta:") {
-                beta = atof(lineItems.at(1).c_str());
-                if (beta <= 0) {
-                    cout << "Wrong beta in the log file(" << lineItems.at(1) << ")." << endl;
+            if (lineItems.at(0) == "Beta0:") {
+                beta0 = atof(lineItems.at(1).c_str());
+                if (beta0 <= 0) {
+                    cout << "Wrong beta0 in the log file(" << lineItems.at(1) << ")." << endl;
                     return false;
                 }
             }
@@ -1185,7 +1211,7 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
             set<unsigned int>::iterator it = used_roles.find(r);
             if (it != used_roles.end()) {
                 post_roles[r-1] = 
-                    ldf_Mult_smooth(1, beta, pos[s-1], post_theta[r-1], 1, V) +
+                    ldf_Mult_smooth(1, beta[r-1], pos[s-1], post_theta[r-1], 1, V) +
                     log(gamma + post_omega[r-1]);
                     //ldf_Mult_smooth(0, gamma, r, post_omega, 1, R, used_roles.size());
             }
@@ -1246,7 +1272,7 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
 double Sampler_t::perplexity(void) {
     double loglik = 0;
     int words = 0;
-    /*
+    /*    
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
            unsigned int f = frames[u-1][t-1];
@@ -1255,8 +1281,8 @@ double Sampler_t::perplexity(void) {
            for (unsigned int s=1; s<=S; ++s) {
                 unsigned int r = roles[f-1][s-1];
                 words++;
-                loglik += log(post_theta[r-1][w[u-1][t-1][s-1]] + beta) -
-                          log(post_theta[r-1][V] + V*beta);
+                loglik += log(post_theta[r-1][w[u-1][t-1][s-1]-1] + beta[r-1][w[u-1][t-1][s-1]]) -
+                          log(post_theta[r-1][V] + beta[r-1][0]);
             }
         }
     }
@@ -1266,6 +1292,7 @@ double Sampler_t::perplexity(void) {
                       log(post_omega[R]+used_roles.size()*gamma); 
         }
     }*/
+    
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
             double tmp = 0;
@@ -1274,7 +1301,7 @@ double Sampler_t::perplexity(void) {
                 for (unsigned int s=1; s<=S; ++s) {
                     unsigned int r = roles[*f-1][s-1];
                     words++;
-                    tmp2 *= (post_theta[r-1][w[u-1][t-1][s-1]] + beta)/(post_theta[r-1][V] + V*beta);
+                    tmp2 *= (post_theta[r-1][w[u-1][t-1][s-1]-1] + beta[r-1][w[u-1][t-1][s-1]])/(post_theta[r-1][V] + beta[r-1][0]);
                 }
                 tmp += tmp2;
             

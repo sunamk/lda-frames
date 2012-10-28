@@ -53,6 +53,7 @@ double ldf_Poi(int normalize, int x, double la);
 double ldf_MultSym(int normalize, int x, int lo, int hi);
 double ldf_Mult(int normalize, int x, double*th, int lo, int hi);
 double ldf_Mult_smooth(int normalize, double eta, int x, double*th, int lo, int hi);
+double ldf_Mult_smooth(int normalize, double *eta, int x, double*th, int lo, int hi);
 double ldf_Mult_smooth(int normalize, double eta, int x, double*th, int lo, int hi, int dim);
 double ldf_DirSym(int normalize, double*th, double al, int dim);
 double ldf_Dir(int normalize, double*th, double*al, int dim);
