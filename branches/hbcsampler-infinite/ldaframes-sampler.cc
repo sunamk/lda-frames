@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
         gamma = vm["gamma"].as<float>();
     }
     if (vm.count("delta")) {
-        gamma = vm["delta"].as<float>();
+        delta = vm["delta"].as<float>();
     }
         
     Sampler_t sampler(frames, roles, alpha, beta, gamma, delta);
