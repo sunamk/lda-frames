@@ -1320,7 +1320,6 @@ double Sampler_t::perplexity(void) {
 }
 
 void Sampler_t::resample_beta(unsigned int iters) {
-    #pragma omp parallel for 
     for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
         for (unsigned int v=1; v<=V; ++v) {
             for (unsigned int iter = 0; iter < iters; ++iter) {
