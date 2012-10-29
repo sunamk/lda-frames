@@ -1296,7 +1296,8 @@ double Sampler_t::perplexity(void) {
                       log(post_omega[R]+used_roles.size()*gamma); 
         }
     }*/
-    
+   
+    #pragma omp parallel for 
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
             double tmp = 0;
@@ -1304,12 +1305,14 @@ double Sampler_t::perplexity(void) {
                 double tmp2 = (post_phi[u-1][*f-1] + alpha)/(post_phi[u-1][F] + used_frames.size()*alpha);
                 for (unsigned int s=1; s<=S; ++s) {
                     unsigned int r = roles[*f-1][s-1];
+                    #pragma omp atomic
                     words++;
                     tmp2 *= (post_theta[r-1][w[u-1][t-1][s-1]-1] + beta[r-1][w[u-1][t-1][s-1]])/(post_theta[r-1][V] + beta[r-1][0]);
                 }
                 tmp += tmp2;
             
-            }            
+            }
+            #pragma omp atomic            
             loglik += log(tmp);
         }
     }
@@ -1317,6 +1320,7 @@ double Sampler_t::perplexity(void) {
 }
 
 void Sampler_t::resample_beta(unsigned int iters) {
+    #pragma omp parallel for 
     for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
         for (unsigned int v=1; v<=V; ++v) {
             for (unsigned int iter = 0; iter < iters; ++iter) {
