@@ -699,20 +699,24 @@ Sampler_t::~Sampler_t() {
 
 
 void Sampler_t::sample(void) {
+    cout << " frames..." << flush;
     if (infinite_F) {
         resample_frames_inf();
     } else {
         resample_frames();
     }
+    cout << "roles..." << flush;
     if (infinite_R) {    
         resample_roles_inf();
     } else {
         resample_roles();
     }
-    if (!infinite_F) {
+    if (infinite_F) {
+        cout << "tau..." << flush;
         resample_tau();
     }
 
+    cout << "beta..." << flush;
     resample_beta(20);
 }
 
@@ -753,12 +757,14 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
     closedir(dp);
 
     for (unsigned int i = startIter; i < iters+1; ++i) {
-        cout << "Iteration no. " << i;
+        cout << "Iteration no. " << i << ":";
+        cout << flush;
         sample();
-
+        cout << "perplexity..." << flush;
+        double p = perplexity();
         cout << " (" << used_frames.size() << " frames, " 
              << used_roles.size() << " roles).";
-        cout << " Perplexity: " << perplexity();
+        cout << " Perplexity: " << p;
         cout << endl;
         /*
         if (i>100 && infinite_F) {
@@ -771,7 +777,9 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
             ss << i << "-";
         }
         if(infinite_F || infinite_R) {
+            cout << "...packing frames and roles.";
             pack_FR();
+            cout << endl;
         }
 
         if (!dump(outputDir + ss.str())) {
