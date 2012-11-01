@@ -9,6 +9,8 @@ Library for accessing semantic frames stored in a database.
 
 import shelve
 import anydbm
+import numpy
+from scipy.spatial.distance import euclidean
 
 
 class LDAF():
@@ -18,6 +20,7 @@ class LDAF():
             self.frames = shelve.open(path + "frames.db", flag='r')
             self.frameDist = shelve.open(path + "framedist.db", flag='r')
             self.realDist = shelve.open(path + "realdist.db", flag='r')
+            self._SQRT2 = numpy.sqrt(2)
         except anydbm.error, msg:
             print "Cannot open database files."
             raise
@@ -47,4 +50,12 @@ class LDAF():
        else:
            return self.realDist[realization][:limit]
         
+    def getF(self):
+        return self.frames["__F__"]
+
+    def getR(self):
+        return self.frames["__R__"]
+
+    def getHellingerDistance(self, v1, v2):
+        return  euclidean(numpy.sqrt(v1),  numpy.sqrt(v2)) / self._SQRT2
         

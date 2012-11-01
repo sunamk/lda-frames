@@ -48,6 +48,8 @@ if __name__ == "__main__":
     data_file = None
     frames_file = None
     roles_file = None
+    F = 0
+    R = 0
     try:
         dict_file = open(dict_file_name)
         data_file = open(data_file_name)
@@ -65,6 +67,10 @@ if __name__ == "__main__":
     print "Loading roles..."
     for l in roles_file.xreadlines():
         roles.append(l.strip().split(" "))
+        F += 1
+        for r in roles[len(roles)-1]:
+            if int(r) > R:
+                R = int(r)
     roles_file.close()
 
     
@@ -117,7 +123,9 @@ if __name__ == "__main__":
             protocol=cPickle.HIGHEST_PROTOCOL)
     for i,f in enumerate(roles):
         frames_database[str(i+1)] = map(str, roles[i])
-        frames_database["__description__"] = dictionary.getRelations()
+    frames_database["__description__"] = dictionary.getRelations()
+    frames_database["__F__"] = F
+    frames_database["__R__"] = R
     frames_database.close()
         
         
