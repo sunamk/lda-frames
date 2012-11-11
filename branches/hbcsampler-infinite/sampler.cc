@@ -776,6 +776,7 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         if (allSamples) {
             ss << i << "-";
         }
+
         if(infinite_F || infinite_R) {
             cout << "...packing frames and roles.";
             pack_FR();
@@ -1276,7 +1277,7 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
 double Sampler_t::perplexity(void) {
     double loglik = 0;
     int words = 0;
-    /*    
+       
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
            unsigned int f = frames[u-1][t-1];
@@ -1290,13 +1291,14 @@ double Sampler_t::perplexity(void) {
             }
         }
     }
+    /*
     for (set<unsigned int>::const_iterator fit=used_frames.begin(); fit!=used_frames.end(); ++fit) {
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end(); ++rit) {
             loglik += log(post_omega[*rit-1]+gamma) -
                       log(post_omega[R]+used_roles.size()*gamma); 
         }
     }*/
-   
+    /* 
     #pragma omp parallel for 
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
@@ -1315,7 +1317,7 @@ double Sampler_t::perplexity(void) {
             #pragma omp atomic            
             loglik += log(tmp);
         }
-    }
+    }*/
     return exp(-loglik/words);
 }
 
