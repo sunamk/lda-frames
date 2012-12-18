@@ -107,7 +107,7 @@ private:
     void resample_roles(void);
     void resample_roles_inf(void);
     void resample_tau(void);
-    void resample_hypers(void);
+    void resample_hypers(unsigned int iters);
     void resample_beta(unsigned int iters);
     bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
 

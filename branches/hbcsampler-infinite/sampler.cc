@@ -409,31 +409,52 @@ void Sampler_t::resample_roles_inf(void) {
     }
 }
 
-void Sampler_t::resample_hypers(void) {
-    cout << "Sampling hyperparameters..." << endl;
-    double bdelta = 5;
-    double adelta = 0.1;
-    double aalpha = 5;
-    double balpha = 5.1;
+void Sampler_t::resample_hypers(unsigned int iters) {
+    //delta = 1.44071;
+    //tables = 43276;
+    cout << "alpha and delta...tables: "  << endl;
+    double bdelta = 1.0;
+    double adelta = 1.0;
+    double aalpha = 1.0;
+    double balpha = 1.0;
 
-    for (unsigned int iters=0; iters<10; iters++) {
-        //sample delta
-        double eta = sample_Bet(delta+1, tables);
-        double bloge = bdelta - log(eta);
-        double pie = 1.0 / (1.0-(tables*bloge/(delta+used_frames.size()-1)));
-        int u = sample_Bern(pie);
-        delta = sample_Gam(adelta+used_frames.size()-1+u, 1.0/bloge);
+    //sample delta
 
-        //sample alpha
-        double qs = 0;
-        double qw = 0;
-        for (unsigned int u=1; u<=U; ++u) {
-            qs += sample_Bern(w[u-1].size() / (w[u-1].size() + alpha));
-            qw += log(sample_Bet(alpha+1, w[u-1].size()));
-        }
-        alpha = sample_Gam(aalpha + tables - qs, 1.0/(balpha - qw));
+    double eta = sample_Bet(delta + 1, tables);
+    double pi = adelta + used_frames.size() - 1;
+    double rate = 1.0 / bdelta - log(eta);
+    pi = pi / (pi + rate * tables);
+    
+    unsigned int cc = sample_Bern(pi);
+    if (cc == 1) {
+        delta = sample_Gam(adelta + used_frames.size(), 1.0 / rate);
+    } else {
+        delta = sample_Gam(adelta + used_frames.size() - 1, 1.0 / rate);
     }
-    cout << "...alpha = " << alpha << ", delta = " << delta << endl;
+    
+    //sample alpha
+    for (unsigned int i=0; i<iters; i++) {
+        /*
+        double us = 0;
+        double vs = 0;
+        for (unsigned int u=1; u<=U; ++u) {
+            us += sample_Bern(w[u-1].size() / (w[u-1].size() + alpha));
+            vs += log(sample_Bet(alpha+1, w[u-1].size()));
+        }
+        alpha = sample_Gam(aalpha + tables - us, 1.0/( balpha - vs));
+        */
+        double sum_log_w = 0.0;
+        double sum_s = 0.0;
+        for (unsigned int u=1; u<=U; ++u) {
+            sum_log_w += log(sample_Bet(alpha + 1, w[u-1].size()));
+            sum_s += (double)sample_Bern(w[u-1].size() / (w[u-1].size() + alpha));
+        }
+        rate = 1.0 / balpha - sum_log_w;
+        alpha = sample_Gam(aalpha + tables - sum_s, 1.0 / rate);
+
+        //cout << alpha << endl;
+    }
+    //cout << "...alpha = " << alpha << ", delta = " << delta << endl;
 }
 
 
@@ -715,7 +736,7 @@ void Sampler_t::sample(void) {
         cout << "tau..." << flush;
         resample_tau();
     }
-
+    
     cout << "beta..." << flush;
     resample_beta(20);
 }
@@ -760,16 +781,15 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         cout << "Iteration no. " << i << ":";
         cout << flush;
         sample();
+        if (i>10 && infinite_F) {
+            resample_hypers(20);
+        }
         cout << "perplexity..." << flush;
         double p = perplexity();
         cout << " (" << used_frames.size() << " frames, " 
              << used_roles.size() << " roles).";
         cout << " Perplexity: " << p;
         cout << endl;
-        /*
-        if (i>100 && infinite_F) {
-            resample_hypers();
-        }*/
 
 
         stringstream ss;
@@ -1277,7 +1297,8 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
 double Sampler_t::perplexity(void) {
     double loglik = 0;
     int words = 0;
-       
+    
+    /*   
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
            unsigned int f = frames[u-1][t-1];
@@ -1288,6 +1309,20 @@ double Sampler_t::perplexity(void) {
                 words++;
                 loglik += log(post_theta[r-1][w[u-1][t-1][s-1]-1] + beta[r-1][w[u-1][t-1][s-1]]) -
                           log(post_theta[r-1][V] + beta[r-1][0]);
+            }
+        }
+    }*/
+    
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
+           unsigned int f = frames[u-1][t-1];
+           loglik += log(post_phi[u-1][f-1]) -
+                     log(post_phi[u-1][F]);
+           for (unsigned int s=1; s<=S; ++s) {
+                unsigned int r = roles[f-1][s-1];
+                words++;
+                loglik += log(post_theta[r-1][w[u-1][t-1][s-1]-1]) -
+                          log(post_theta[r-1][V]);
             }
         }
     }
@@ -1337,7 +1372,30 @@ void Sampler_t::resample_beta(unsigned int iters) {
         
         }
     }
-    
+   /* 
+    vector<double> beta_sum(V, 0);
+    for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
+        for (unsigned int v=1; v<=V; ++v) {
+            for (unsigned int iter = 0; iter < iters; ++iter) {
+                double oldBeta = beta[*rit-1][v];
+                beta[*rit-1][v] = max(
+                    beta[*rit-1][v]*
+                    (digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v])-digamma(beta[*rit-1][v]))/
+                    (digamma(post_theta[*rit-1][V]+beta[*rit-1][0])-digamma(beta[*rit-1][0])),
+                    0.0000001);
+                if (post_theta[*rit-1][V] == 0) beta[*rit-1][v] = 0.0000001;
+                beta[*rit-1][0] += beta[*rit-1][v] - oldBeta; 
+            }
+            beta_sum[v-1] += beta[*rit-1][v]; 
+        }
+    }
+    for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
+        for (unsigned int v=1; v<=V; ++v) {
+            beta[*rit-1][0] -= beta[*rit-1][v];
+            beta[*rit-1][v] = beta[*rit-1][v]*V*beta0/beta_sum[v-1];
+            beta[*rit-1][0] += beta[*rit-1][v];
+        }
+    }*/
 }
 
 void Sampler_t::pack_FR(void) {

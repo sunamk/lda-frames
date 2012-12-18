@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     float alpha = 5.0;
     float beta = 0.1;
     float gamma = 0.1;
-    float delta = 1.5;
+    float delta = 1.0;
     bool printResult = false;
     bool allSamples = false;
     
