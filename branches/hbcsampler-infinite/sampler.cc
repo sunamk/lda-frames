@@ -191,7 +191,7 @@ void Sampler_t::resample_frames_inf(void) {
             } else {
                 double prod = log(alpha*tau[0]);
                 for (unsigned int s = 1; s <= S; ++s) {
-                    //prod += ldf_Mult_smooth(1, beta, w[u-1][t-1][s-1], opravit betu
+                    //prod += ldf_Mult_smooth(1, beta[frame[s-1]-1], w[u-1][t-1][s-1],
                     //    post_theta[frame[s-1]-1], 1, V);
                     prod -= log(V);
                 }
@@ -263,7 +263,6 @@ void Sampler_t::resample_frames_inf(void) {
 }
 
 void Sampler_t::resample_roles(void) {
-
       for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit!=used_frames.end(); ++fit) {
         double* post_roles = (double*) malloc(sizeof(double) * (R + 1));
         
@@ -410,9 +409,6 @@ void Sampler_t::resample_roles_inf(void) {
 }
 
 void Sampler_t::resample_hypers(unsigned int iters) {
-    //delta = 1.44071;
-    //tables = 43276;
-    cout << "alpha and delta...tables: "  << endl;
     double bdelta = 1.0;
     double adelta = 1.0;
     double aalpha = 1.0;
@@ -745,7 +741,6 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
 
     if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     int status = mkdir(outputDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
     if(iters < startIter) {
         cout << "All iterations already performed." << endl;
         return true;
@@ -781,7 +776,8 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         cout << "Iteration no. " << i << ":";
         cout << flush;
         sample();
-        if (i>10 && infinite_F) {
+        if (i>=minHyperIter && infinite_F) {
+            cout << "alpha and delta..." << flush;
             resample_hypers(20);
         }
         cout << "perplexity..." << flush;
@@ -862,7 +858,9 @@ bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aite
 
     lfile << "Input file name:\t" << inputFile << endl;
     lfile << "Number of frames:\t" << F << endl;
+    lfile << "Estimate number of frames:\t" << int(infinite_F) << endl;
     lfile << "Number of roles:\t" << R << endl;
+    lfile << "Estimate number of roles:\t" << int(infinite_R) << endl;
     lfile << "Number of slots:\t" << S << endl;
     lfile << "Alpha:\t" << alpha << endl;
     lfile << "Beta0:\t" << beta0 << endl;
@@ -1004,12 +1002,28 @@ bool Sampler_t::recoverParameters(string logDir) {
                     return false;
                 }
             }
+            if (lineItems.at(0) == "Estimate number of frames:") {
+                unsigned int tmp = atoi(lineItems.at(1).c_str());
+                if (tmp < 0 || tmp > 1) {
+                    cout << "Wrong value of 'estimate number of frames' in the log file (" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+                infinite_F = bool(tmp);
+            }
             if (lineItems.at(0) == "Number of roles:") {
                 R = atoi(lineItems.at(1).c_str());
                 if (R <= 0) {
                     cout << "Wrong number of roles in the log file (" << lineItems.at(1) << ")." << endl;
                     return false;
                 }
+            }
+            if (lineItems.at(0) == "Estimate number of roles:") {
+                unsigned int tmp = atoi(lineItems.at(1).c_str());
+                if (tmp < 0 || tmp > 1) {
+                    cout << "Wrong value of 'estimate number of roles' in the log file (" << lineItems.at(1) << ")." << endl;
+                    return false;
+                }
+                infinite_R = bool(tmp);
             }
             if (lineItems.at(0) == "Alpha:") {
                 alpha = atof(lineItems.at(1).c_str());
@@ -1109,7 +1123,7 @@ bool Sampler_t::recoverData(string dataDir) {
             //recover data
             frames[u-1][t-1] = frame;
             used_frames.insert(frame);
-            //tau[frame] = 0;
+            tau[frame] = 0;
 
             fc_f[frame-1]++;
             for (unsigned int s=1; s<=S; ++s) {
@@ -1131,7 +1145,6 @@ bool Sampler_t::recoverData(string dataDir) {
         return false;
     }
 
-    //resample_tau();
     
     //parsing roles.smpl
     cout << "...parsing '" << dataDir << "roles.smpl'." << endl;
@@ -1186,11 +1199,24 @@ bool Sampler_t::recoverData(string dataDir) {
     }
 
     cout << "...resampling phi and theta." << endl;
-   
+
+    initialize_beta(); 
     initialize_post_phi();
+    resample_post_phi();
     initialize_post_theta();
+    resample_post_theta();
     initialize_post_omega();
-    //resample_tau();
+    cout << "...resampling beta." << endl;
+    resample_beta(20);
+    if (infinite_F) {
+        initialize_infinite_vars();
+        cout << "...resampling tau." << endl;
+        resample_tau();
+        if (startIter >= minHyperIter) {
+            cout << "...resampling alpha and delta." << endl;
+            resample_hypers(20);
+        }
+    }
 
     ffile.close();
     rfile.close();

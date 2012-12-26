@@ -28,7 +28,7 @@ public:
                             alpha(_alpha), beta0(_beta), gamma(_gamma),
                             delta(_delta),
                             infinite_F(false), infinite_R(false),
-                            startIter(1), initialized(false)
+                            startIter(1), minHyperIter(50), initialized(false)
                             {};
 
     bool loadData(string inputFileName);
@@ -86,6 +86,7 @@ private:
 
     string inputFile;           //
     unsigned int startIter;     //
+    unsigned int minHyperIter;
   
     vector<vector<vector<unsigned int> > > w;//inputData;                 //
     vector<unsigned int> fc_f;                                            //
