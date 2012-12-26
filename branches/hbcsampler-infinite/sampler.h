@@ -52,7 +52,7 @@ public:
     bool recoverParameters(string logDir);
 
     bool recoverData(string dataDir);
-
+    
     //infinite LDA-frames
     unsigned int createNewFrame(vector<unsigned int> &frame);
     //unsigned int createNewFrame(vector<unsigned int> &frame);
