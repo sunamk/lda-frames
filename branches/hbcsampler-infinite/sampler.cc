@@ -14,6 +14,8 @@
 #include "distributions.h"
 #include "stats.h"
 
+#define BOUNDPROB(x) (((x)<-300)?(-300):((((x)>300)?(300):(x))))
+
 void Sampler_t::resample_post_phi(void) {
     for (unsigned int u = 1; u <= U; ++u) {
         for (unsigned int f = 1; f<=F; ++f) {
@@ -112,8 +114,13 @@ void Sampler_t::resample_frames(void) {
                     ++fit) {
                 double prod = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod += ldf_Mult_smooth(1, beta[roles[*fit-1][s-1]-1], w[u-1][t-1][s-1],
-                            post_theta[roles[*fit-1][s-1]-1], 1, V);
+                    //prod += ldf_Mult_smooth(1, beta[roles[*fit-1][s-1]-1], w[u-1][t-1][s-1],
+                    //        post_theta[roles[*fit-1][s-1]-1], 1, V);
+                    prod += BOUNDPROB(
+                            log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] + 
+                            beta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1]) -
+                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
+                            ); 
                 }
                 post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha, *fit, post_phi[u-1], 1, F);
             }
@@ -161,8 +168,13 @@ void Sampler_t::resample_frames_inf(void) {
                 //probability of used frames
                 double prod = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod += ldf_Mult_smooth(1, beta[roles[*fit-1][s-1]-1], w[u-1][t-1][s-1],
-                            post_theta[roles[*fit-1][s-1]-1], 1, V);
+                    //prod += ldf_Mult_smooth(1, beta[roles[*fit-1][s-1]-1], w[u-1][t-1][s-1],
+                    //        post_theta[roles[*fit-1][s-1]-1], 1, V);
+                    prod += BOUNDPROB(
+                            log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] +
+                            beta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1]) -
+                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
+                            );
                 }
                 post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha*tau[*fit], *fit, post_phi[u-1], 1, F, 
                         used_frames.size());
@@ -252,7 +264,6 @@ void Sampler_t::resample_roles(void) {
             FrameKey_t oldFrame; 
             oldFrame = frameSet->makeKey(roles[*fit-1]);
 
-            //for (unsigned int r = 1; r <= R; ++r) {
             for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit != used_roles.end();
                     ++rit) {
                 FrameKey_t newFrame = frameSet->makeKey(roles[*fit-1], s, *rit);
@@ -260,8 +271,15 @@ void Sampler_t::resample_roles(void) {
                 if (newFrame == oldFrame || !inside) {
                     double prod = 0;
                     for (unsigned int v = 1; v<=V; ++v) {
-                        prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta[*rit-1], v, 
-                            post_theta[*rit-1], 1, V);
+                        //prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta[*rit-1], v, 
+                        //    post_theta[*rit-1], 1, V);
+                        prod += fc_fsw[*fit-1][s-1][v-1]*BOUNDPROB(                                   
+                            log(post_theta[*rit-1][v-1] +
+                            beta[*rit-1][v-1]) -
+                            log(post_theta[*rit-1][V] + beta[*rit-1][V])
+                            );
+
+
                     }
                     post_roles[*rit] = prod + ldf_Mult_smooth(0, gamma, *rit, post_omega, 1, R);
                 }
@@ -309,8 +327,11 @@ void Sampler_t::resample_roles_inf(void) {
                 if (newFrame == oldFrame || !inside) {
                     double prod = 0;
                     for (unsigned int v = 1; v<=V; ++v) {
-                        prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta[*rit-1], v, 
-                            post_theta[*rit-1], 1, V);
+                        prod += fc_fsw[*fit-1][s-1][v-1]*BOUNDPROB(
+                            log(post_theta[*rit-1][v-1] +
+                            beta[*rit-1][v-1]) -
+                            log(post_theta[*rit-1][V] + beta[*rit-1][V])
+                            );
                     }
                     //post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
                     //    1, R, used_roles.size());
@@ -361,14 +382,14 @@ void Sampler_t::resample_hypers(unsigned int iters) {
     for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
         for (unsigned int v=1; v<=V; ++v) {
             for (unsigned int iter = 0; iter < iters; ++iter) {
-                double oldBeta = beta[*rit-1][v];
-                beta[*rit-1][v] = max(
-                    beta[*rit-1][v]*
-                    (digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v])-digamma(beta[*rit-1][v]))/
-                    (digamma(post_theta[*rit-1][V]+beta[*rit-1][0])-digamma(beta[*rit-1][0])),
+                double oldBeta = beta[*rit-1][v-1];
+                beta[*rit-1][v-1] = max(
+                    beta[*rit-1][v-1]*
+                    (digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v-1])-digamma(beta[*rit-1][v-1]))/
+                    (digamma(post_theta[*rit-1][V]+beta[*rit-1][V])-digamma(beta[*rit-1][V])),
                     beta0);
-                if (post_theta[*rit-1][V] == 0) beta[*rit-1][v] = beta0;
-                beta[*rit-1][0] += beta[*rit-1][v] - oldBeta;
+                if (post_theta[*rit-1][V] == 0) beta[*rit-1][v-1] = beta0;
+                beta[*rit-1][V] += beta[*rit-1][v-1] - oldBeta;
             }
 
         }
@@ -418,11 +439,13 @@ Sampler_t::~Sampler_t() {
             free(roles[f-1]);
         }
         free(roles);
-
+        
+        /*
         for (unsigned int r=1; r<=R; ++r) {
             free(post_theta[r-1]);
         }
         free(post_theta);
+        */
 
         free(post_omega);
 
@@ -434,10 +457,10 @@ Sampler_t::~Sampler_t() {
         free(frames);
 
         delete frameSet;
-        
-        for (unsigned int r=0; r<R; ++r) {
-            free(beta[r]);
-        } 
+       
+        //for (unsigned int r=0; r<R; ++r) {
+        //    free(beta[r]);
+        //} 
     }
 
 }
@@ -546,21 +569,23 @@ unsigned int Sampler_t::createNewRole(void) {
     } else {
         R++;
         role = R;
-        beta.push_back((double *) malloc(sizeof(double) * (V + 1)));
-        post_theta = (double**) realloc(post_theta, sizeof(double*) * R);
-        post_theta[R-1] = (double*) malloc(sizeof(double) * (V + 1));
-        for (unsigned int v=1; v<=V; ++v) {
-            post_theta[R-1][v-1] = 0;
-        }
-        post_theta[R-1][V] = 0;
+        //beta.push_back((double *) malloc(sizeof(double) * (V + 1)));
+        beta.push_back(vector<double>(V + 1, beta0));
+        //post_theta = (double**) realloc(post_theta, sizeof(double*) * R);
+        //post_theta[R-1] = (double*) malloc(sizeof(double) * (V + 1));
+        post_theta.push_back(vector<double>(V + 1, 0));
+        //for (unsigned int v=1; v<=V; ++v) {
+        //    post_theta[R-1][v-1] = 0;
+        //}
+        //post_theta[R-1][V] = 0;
 
         post_omega = (double*) realloc(post_omega, sizeof(double) * (R + 1));
         post_omega[R] = post_omega[R-1];
         post_omega[R-1] = 0;
         
     }
-    beta[role-1][0] = V*beta0;
-    for (unsigned int v=1; v<=V; ++v) beta[role-1][v] = beta0;
+    beta[role-1][V] = V*beta0;
+    //for (unsigned int v=1; v<=V; ++v) beta[role-1][v] = beta0;
 
     used_roles.insert(role);
     return role;
@@ -573,8 +598,13 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
         map<unsigned short int, double> post_roles;
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end();
                 ++rit) {
-            post_roles[*rit] = ldf_Mult_smooth(1, beta[*rit-1], pos[s-1], post_theta[*rit-1], 1, V) +
-                log(gamma + post_omega[*rit-1]);
+            //post_roles[*rit] = ldf_Mult_smooth(1, beta[*rit-1], pos[s-1], post_theta[*rit-1], 1, V) +
+            //    log(gamma + post_omega[*rit-1]);
+            post_roles[*rit] = BOUNDPROB(
+                log(post_theta[*rit-1][pos[s-1]-1] + beta[*rit-1][pos[s-1]-1]) -
+                log(post_theta[*rit-1][V] + beta[*rit-1][V]) +
+                log(gamma + post_omega[*rit-1])
+                );
         }
         post_roles[R + 1] = log(gamma) - log(V);
 

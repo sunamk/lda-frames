@@ -29,13 +29,15 @@ bool Sampler_t::initialize(bool recovery) {
         post_phi[u-1] = (double*) malloc(sizeof(double) * (F + 1));
     }
 
-    post_theta = (double**) malloc(sizeof(double*) * R);
+    //post_theta = (double**) malloc(sizeof(double*) * R);
     for (unsigned int r=1; r<=R; ++r) {
-        post_theta[r-1] = (double*) malloc(sizeof(double) * (V + 1));
+        post_theta.push_back(vector<double>(V + 1, 0));
+        //post_theta[r-1] = (double*) malloc(sizeof(double) * (V + 1));
     }
 
     for (unsigned int r=0; r<R; ++r) {
-        beta.push_back((double*) malloc(sizeof(double) * (V + 1)));
+        //beta.push_back((double*) malloc(sizeof(double) * (V + 1)));
+        beta.push_back(vector<double>(V + 1, 0));
     }
 
     post_omega = (double*) malloc(sizeof(double) * (R +1));
@@ -99,10 +101,10 @@ void Sampler_t::initialize_post_phi(void) {
 }
 
 void Sampler_t::initialize_beta(void) {
-    for (unsigned int r=0; r<R; ++r) {
-        beta[r][0]=V*beta0;
+    for (unsigned int r=1; r<=R; ++r) {
+        beta[r-1][V]=V*beta0;
         for (unsigned int v = 1; v<=V; ++v) {
-            beta[r][v] = beta0;
+            beta[r-1][v-1] = beta0;
         }
     }
 }

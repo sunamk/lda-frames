@@ -67,7 +67,7 @@ private:
     unsigned int V;
     double alpha;
     double beta0;
-    vector<double *> beta;
+    vector<vector<double> > beta;
     double gamma;
     double delta;
 
@@ -75,7 +75,7 @@ private:
     unsigned int** roles;
 
     double** post_phi;
-    double** post_theta;
+    vector<vector<double> > post_theta;
     double* post_omega;
 
     bool infinite_F;
