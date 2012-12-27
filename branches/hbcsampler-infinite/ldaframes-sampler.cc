@@ -6,7 +6,7 @@
 
 #include <iostream>
 #include <boost/program_options.hpp>
-
+#include <ctime>
 #include "sampler.h"
 
 namespace po = boost::program_options;
@@ -124,6 +124,8 @@ int main(int argc, char **argv) {
     if (vm.count("delta")) {
         delta = vm["delta"].as<float>();
     }
+
+    srand((unsigned)time(0));
         
     Sampler_t sampler(frames, roles, alpha, beta, gamma, delta);
     

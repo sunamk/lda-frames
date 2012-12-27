@@ -39,7 +39,7 @@ public:
 
     bool dump(string prefix);
 
-    bool dumpBest(string outputDir);
+    //bool dumpBest(string outputDir);
     
     bool sampleAll(string outputDir, unsigned int iters, bool allSamples);
 
@@ -55,45 +55,44 @@ public:
     
     //infinite LDA-frames
     unsigned int createNewFrame(vector<unsigned int> &frame);
-    //unsigned int createNewFrame(vector<unsigned int> &frame);
     unsigned int createNewRole(void);
 
     ~Sampler_t();
 
 private:
-    unsigned int F;             //
-    unsigned int R;             //
-    unsigned int S;             //
-    unsigned int U;             //
-    unsigned int V;             //
-    double alpha;               //
-    double beta0;               //
+    unsigned int F;
+    unsigned int R;
+    unsigned int S;
+    unsigned int U;
+    unsigned int V;
+    double alpha;
+    double beta0;
     vector<double *> beta;
-    double gamma;               //
-    double delta;               //
+    double gamma;
+    double delta;
 
-    unsigned int** frames;      //
-    unsigned int** roles;       //
+    unsigned int** frames;
+    unsigned int** roles;
 
-    double** post_phi;          //
-    double** post_theta;        //
-    double* post_omega;         //
+    double** post_phi;
+    double** post_theta;
+    double* post_omega;
 
-    bool infinite_F;            //
-    bool infinite_R;            //
+    bool infinite_F;
+    bool infinite_R;
 
-    Frames_t *frameSet;         //
+    Frames_t *frameSet;
 
-    string inputFile;           //
-    unsigned int startIter;     //
+    string inputFile;
+    unsigned int startIter;
     unsigned int minHyperIter;
   
-    vector<vector<vector<unsigned int> > > w;//inputData;                 //
-    vector<unsigned int> fc_f;                                            //
-    vector<vector<vector<unsigned int> > > fc_fsw;                        //
+    vector<vector<vector<unsigned int> > > w;//inputData;
+    vector<unsigned int> fc_f;
+    vector<vector<vector<unsigned int> > > fc_fsw;
 
     //infinite LDA-frames
-    set<unsigned int> unused_frames, used_frames, unused_roles, used_roles; //
+    set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
     map<unsigned int, double> tau;
     Antoniak_t antoniak;
     unsigned int tables;
@@ -109,7 +108,7 @@ private:
     void resample_roles_inf(void);
     void resample_tau(void);
     void resample_hypers(unsigned int iters);
-    void resample_beta(unsigned int iters);
+    //void resample_beta(unsigned int iters);
     bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
 
 
