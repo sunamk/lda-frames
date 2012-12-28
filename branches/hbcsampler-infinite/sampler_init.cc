@@ -24,9 +24,10 @@ bool Sampler_t::initialize(bool recovery) {
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
     }
 
-    post_phi = (double**) malloc(sizeof(double*) * U);
+    //post_phi = (double**) malloc(sizeof(double*) * U);
     for (unsigned int u=1; u<=U; ++u) {
-        post_phi[u-1] = (double*) malloc(sizeof(double) * (F + 1));
+        post_phi.push_back(vector<double>(F + 1, 0));
+        //post_phi[u-1] = (double*) malloc(sizeof(double) * (F + 1));
     }
 
     //post_theta = (double**) malloc(sizeof(double*) * R);

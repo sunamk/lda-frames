@@ -74,7 +74,7 @@ private:
     unsigned int** frames;
     unsigned int** roles;
 
-    double** post_phi;
+    vector<vector<double> > post_phi;
     vector<vector<double> > post_theta;
     double* post_omega;
 

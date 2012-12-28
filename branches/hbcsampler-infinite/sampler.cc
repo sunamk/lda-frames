@@ -122,7 +122,8 @@ void Sampler_t::resample_frames(void) {
                             log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
                             ); 
                 }
-                post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha, *fit, post_phi[u-1], 1, F);
+                //post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha, *fit, post_phi[u-1], 1, F);
+                post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha));
             }
 
             //sample frame
@@ -176,15 +177,16 @@ void Sampler_t::resample_frames_inf(void) {
                             log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
                             );
                 }
-                post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha*tau[*fit], *fit, post_phi[u-1], 1, F, 
-                        used_frames.size());
+                //post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha*tau[*fit], *fit, post_phi[u-1], 1, F, 
+                //        used_frames.size());
+                post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha*tau[*fit]));
             }
             //sample new frame
             vector<unsigned int> frame(S, 0);
             if (sample_new_frame(frame, w[u-1][t-1])) {
-                double prod = log(alpha*tau[0]);
+                double prod = BOUNDPROB(log(alpha*tau[0]));
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod -= log(V);
+                    prod -= BOUNDPROB(log(V));
                 }
                 post_frames[F+1] = prod;
             }
@@ -344,7 +346,7 @@ void Sampler_t::resample_roles_inf(void) {
             for (unsigned int v = 1; v<=V; ++v) {
                 prod -= fc_fsw[*fit-1][s-1][v-1]*log(V);
             }
-            post_roles[R + 1] = log(gamma) + prod;
+            post_roles[R + 1] = prod + BOUNDPROB(log(gamma));
             
 
             //Sample role id
@@ -450,10 +452,10 @@ Sampler_t::~Sampler_t() {
         free(post_omega);
 
         for (unsigned int u=1; u<=U; ++u) {
-            free(post_phi[u-1]);
+            //free(post_phi[u-1]);
             free(frames[u-1]);
         }
-        free(post_phi);
+        //free(post_phi);
         free(frames);
 
         delete frameSet;
@@ -635,7 +637,8 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
         F++;
         frameId = F;
         for (unsigned int u = 1; u <= U; ++u) {
-            post_phi[u-1] = (double*) realloc(post_phi[u-1], sizeof(double) * (F + 1));
+            //post_phi[u-1] = (double*) realloc(post_phi[u-1], sizeof(double) * (F + 1));
+            post_phi[u-1].push_back(0);
             post_phi[u-1][F] = post_phi[u-1][F-1];
             post_phi[u-1][F-1] = 0;
         }
@@ -667,13 +670,13 @@ double Sampler_t::perplexity(void) {
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= w[u-1].size(); ++t) {
            unsigned int f = frames[u-1][t-1];
-           loglik += log(post_phi[u-1][f-1]) -
-                     log(post_phi[u-1][F]);
+           loglik += BOUNDPROB(log(post_phi[u-1][f-1]) -
+                     log(post_phi[u-1][F]));
            for (unsigned int s=1; s<=S; ++s) {
                 unsigned int r = roles[f-1][s-1];
                 words++;
-                loglik += log(post_theta[r-1][w[u-1][t-1][s-1]-1]) -
-                          log(post_theta[r-1][V]);
+                loglik += BOUNDPROB(log(post_theta[r-1][w[u-1][t-1][s-1]-1]) -
+                          log(post_theta[r-1][V]));
             }
         }
     }
