@@ -15,7 +15,8 @@ typedef vector<unsigned int> FrameKey_t;
 
 class Frames_t {
 public:
-    Frames_t(unsigned int _S): S(_S) {};
+    //Frames_t(unsigned int _S): S(_S) {};
+    void setS(unsigned int slots);
 
     FrameKey_t makeKey(vector<unsigned int> &f);
     

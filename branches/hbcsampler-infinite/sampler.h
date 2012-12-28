@@ -11,9 +11,8 @@
 #include <set>
 #include <map>
 #include <string>
-#include "antoniak.h"
+#include "distributions.h"
 #include "frames.h"
-
 
 using namespace std;
 
@@ -24,12 +23,16 @@ public:
               float _alpha,
               float _beta,
               float _gamma,
-              float _delta): F(_F), R(_R), S(0), U(0), V(0),
+              float _delta,
+              long int _seed): F(_F), R(_R), S(0), U(0), V(0),
                             alpha(_alpha), beta0(_beta), gamma(_gamma),
                             delta(_delta),
+                            seed(_seed),
                             infinite_F(false), infinite_R(false),
                             startIter(1), minHyperIter(50), initialized(false)
                             {};
+
+    ~Sampler_t();
 
     bool loadData(string inputFileName);
 
@@ -39,8 +42,6 @@ public:
 
     bool dump(string prefix);
 
-    //bool dumpBest(string outputDir);
-    
     bool sampleAll(string outputDir, unsigned int iters, bool allSamples);
 
     void printFrames(void);
@@ -57,8 +58,6 @@ public:
     unsigned int createNewFrame(vector<unsigned int> &frame);
     unsigned int createNewRole(void);
 
-    ~Sampler_t();
-
 private:
     unsigned int F;
     unsigned int R;
@@ -70,9 +69,9 @@ private:
     vector<vector<double> > beta;
     double gamma;
     double delta;
+    long int seed;
+    Distributions_t *dist;
 
-    //unsigned int** frames;
-    //unsigned int** roles;
     vector<vector<unsigned int> > frames;
     vector<vector<unsigned int> > roles;
 
@@ -83,7 +82,7 @@ private:
     bool infinite_F;
     bool infinite_R;
 
-    Frames_t *frameSet;
+    Frames_t frameSet;
 
     string inputFile;
     unsigned int startIter;
@@ -96,7 +95,6 @@ private:
     //infinite LDA-frames
     set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
     map<unsigned int, double> tau;
-    Antoniak_t antoniak;
     unsigned int tables;
     void pack_FR(void);
 
@@ -110,9 +108,7 @@ private:
     void resample_roles_inf(void);
     void resample_tau(void);
     void resample_hypers(unsigned int iters);
-    //void resample_beta(unsigned int iters);
     bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
-
 
     //inititalization
     bool initialized;
@@ -126,6 +122,5 @@ private:
 
     double perplexity(void);
 };
-
 
 #endif

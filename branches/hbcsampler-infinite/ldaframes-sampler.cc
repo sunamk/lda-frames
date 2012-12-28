@@ -6,8 +6,9 @@
 
 #include <iostream>
 #include <boost/program_options.hpp>
-#include <ctime>
+#include "distributions.h"
 #include "sampler.h"
+
 
 namespace po = boost::program_options;
 
@@ -32,6 +33,7 @@ int main(int argc, char **argv) {
     float delta = 1.0;
     bool printResult = false;
     bool allSamples = false;
+    long int seed = 0;
     
     po::options_description desc("Allowed options");
 
@@ -48,6 +50,8 @@ int main(int argc, char **argv) {
         ("beta", po::value<float>(), "beta")
         ("gamma", po::value<float>(), "gamma")
         ("delta", po::value<float>(), "delta")
+        ("seed", po::value<long int>(), 
+        "random number generator seed (0 = current time)")
         ("all-samples,A", "save all samples")
         ("recovery", "try to recover data and continue sampling")
         ("print,P", "print resulting frames and roles")
@@ -124,10 +128,12 @@ int main(int argc, char **argv) {
     if (vm.count("delta")) {
         delta = vm["delta"].as<float>();
     }
+    if (vm.count("seed")) {
+        seed = vm["seed"].as<long int>();
+    }
 
-    srand((unsigned)time(0));
-        
-    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta);
+
+    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed);
     
 
     
@@ -156,8 +162,7 @@ int main(int argc, char **argv) {
         sampler.printRoles();
         cout << endl;
     }
-    
-    //cout << "Selecting the best sample..." << endl;
-    //sampler.dumpBest(outputDirectoryName);
+
+    return 0;
 
 }

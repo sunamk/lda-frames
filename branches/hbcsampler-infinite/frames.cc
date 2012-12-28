@@ -8,12 +8,12 @@
 #include <iostream>
 
 
+void Frames_t::setS(unsigned int slots) {
+    S = slots;
+}
+
 FrameKey_t Frames_t::makeKey(vector<unsigned int> &f) {
     FrameKey_t k = f;
-    /*    
-    for (unsigned int i = 0; i < S; ++i) {
-        k.push_back(f[i]);
-    }*/
     return k;
 }
 

@@ -11,8 +11,6 @@
 #include <sys/errno.h>
 #include <dirent.h>
 #include "sampler.h"
-#include "distributions.h"
-#include "stats.h"
 
 #define BOUNDPROB(x) (((x)<-300)?(-300):((((x)>300)?(300):(x))))
 
@@ -73,8 +71,7 @@ void Sampler_t::resample_tau(void) {
         fc[id] = 0;
         for (unsigned int u=1; u<=U; ++u) {
             if (post_phi[u-1][*it-1] > 1) {
-                fc[id] += antoniak.randAntoniak(alpha * tau[*it], post_phi[u-1][*it-1]);
-                //fc[id] += antoniak.randCRP(alpha * tau[*it], post_phi[u-1][*it-1]);
+                fc[id] += dist->sampleAntoniak(alpha * tau[*it], post_phi[u-1][*it-1]);
             } else {
                 fc[id] += post_phi[u-1][*it-1];
             }
@@ -83,7 +80,7 @@ void Sampler_t::resample_tau(void) {
         id++;
     }    
     fc[used_frames.size()] = delta;
-    sample_Dir(dirs, fc, used_frames.size() + 1);
+    dist->sampleDirichlet(dirs, fc, used_frames.size() + 1);
     for (unsigned int i=0; i<used_frames.size(); ++i) {
         tau[idmap[i]] = dirs[i];
     }
@@ -114,21 +111,18 @@ void Sampler_t::resample_frames(void) {
                     ++fit) {
                 double prod = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    //prod += ldf_Mult_smooth(1, beta[roles[*fit-1][s-1]-1], w[u-1][t-1][s-1],
-                    //        post_theta[roles[*fit-1][s-1]-1], 1, V);
                     prod += BOUNDPROB(
                             log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] + 
                             beta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1]) -
                             log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
                             ); 
                 }
-                //post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha, *fit, post_phi[u-1], 1, F);
                 post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha));
             }
 
             //sample frame
-            normalizeLogMult(post_frames);
-            frames[u-1][t-1] = sampleMultinomial(post_frames);
+            dist->normalizeLogMult(post_frames);
+            frames[u-1][t-1] = dist->sampleMultinomial(post_frames);
 
             //update new values
             for (unsigned int s=1; s<=S; ++s) {
@@ -169,16 +163,12 @@ void Sampler_t::resample_frames_inf(void) {
                 //probability of used frames
                 double prod = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    //prod += ldf_Mult_smooth(1, beta[roles[*fit-1][s-1]-1], w[u-1][t-1][s-1],
-                    //        post_theta[roles[*fit-1][s-1]-1], 1, V);
                     prod += BOUNDPROB(
                             log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] +
                             beta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1]) -
                             log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
                             );
                 }
-                //post_frames[*fit] = prod + ldf_Mult_smooth(0, alpha*tau[*fit], *fit, post_phi[u-1], 1, F, 
-                //        used_frames.size());
                 post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha*tau[*fit]));
             }
             //sample new frame
@@ -192,12 +182,12 @@ void Sampler_t::resample_frames_inf(void) {
             }
 
             //sample frame id
-            normalizeLogMult(post_frames);
-            unsigned int newFrame = sampleMultinomial(post_frames);
+            dist->normalizeLogMult(post_frames);
+            unsigned int newFrame = dist->sampleMultinomial(post_frames);
             
             //free unused frames and roles
             if (frames[u-1][t-1] != newFrame && frames[u-1][t-1] != 0 && fc_f[frames[u-1][t-1]-1] == 0) {
-                frameSet->remove(frameSet->makeKey(roles[frames[u-1][t-1]-1]));
+                frameSet.remove(frameSet.makeKey(roles[frames[u-1][t-1]-1]));
                 for (unsigned int s=1; s<=S; ++s) {
                     post_omega[roles[frames[u-1][t-1]-1][s-1]-1]--;
                     post_omega[R]--;
@@ -264,36 +254,31 @@ void Sampler_t::resample_roles(void) {
             post_omega[R]--;
            
             FrameKey_t oldFrame; 
-            oldFrame = frameSet->makeKey(roles[*fit-1]);
+            oldFrame = frameSet.makeKey(roles[*fit-1]);
 
             for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit != used_roles.end();
                     ++rit) {
-                FrameKey_t newFrame = frameSet->makeKey(roles[*fit-1], s, *rit);
-                bool inside = frameSet->inside(newFrame);
+                FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, *rit);
+                bool inside = frameSet.inside(newFrame);
                 if (newFrame == oldFrame || !inside) {
                     double prod = 0;
                     for (unsigned int v = 1; v<=V; ++v) {
-                        //prod += fc_fsw[*fit-1][s-1][v-1]*ldf_Mult_smooth(1, beta[*rit-1], v, 
-                        //    post_theta[*rit-1], 1, V);
                         prod += fc_fsw[*fit-1][s-1][v-1]*BOUNDPROB(                                   
                             log(post_theta[*rit-1][v-1] +
                             beta[*rit-1][v-1]) -
                             log(post_theta[*rit-1][V] + beta[*rit-1][V])
                             );
-
-
                     }
-                    //post_roles[*rit] = prod + ldf_Mult_smooth(0, gamma, *rit, post_omega, 1, R);
                     post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma));
                 }
             }
 
             //sample role
-            normalizeLogMult(post_roles);
-            roles[*fit-1][s-1] = sampleMultinomial(post_roles);
+            dist->normalizeLogMult(post_roles);
+            roles[*fit-1][s-1] = dist->sampleMultinomial(post_roles);
         
-            frameSet->remove(oldFrame);
-            frameSet->insert(frameSet->makeKey(roles[*fit-1]));
+            frameSet.remove(oldFrame);
+            frameSet.insert(frameSet.makeKey(roles[*fit-1]));
 
             post_omega[roles[*fit-1][s-1]-1]++;
             post_omega[R]++;
@@ -320,11 +305,11 @@ void Sampler_t::resample_roles_inf(void) {
             post_omega[R]--;
 
             FrameKey_t oldFrame; 
-            oldFrame = frameSet->makeKey(roles[*fit-1]);
+            oldFrame = frameSet.makeKey(roles[*fit-1]);
             
             for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit != used_roles.end(); ++rit) {
-                FrameKey_t newFrame = frameSet->makeKey(roles[*fit-1], s, *rit);
-                bool inside = frameSet->inside(newFrame);
+                FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, *rit);
+                bool inside = frameSet.inside(newFrame);
 
                 //probability of used roles
                 if (newFrame == oldFrame || !inside) {
@@ -336,8 +321,6 @@ void Sampler_t::resample_roles_inf(void) {
                             log(post_theta[*rit-1][V] + beta[*rit-1][V])
                             );
                     }
-                    //post_roles[r-1] = prod + ldf_Mult_smooth(0, gamma, r, post_omega, 
-                    //    1, R, used_roles.size());
                     post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma));
                 }
             }
@@ -351,8 +334,8 @@ void Sampler_t::resample_roles_inf(void) {
             
 
             //Sample role id
-            normalizeLogMult(post_roles);
-            unsigned int newRole = sampleMultinomial(post_roles);
+            dist->normalizeLogMult(post_roles);
+            unsigned int newRole = dist->sampleMultinomial(post_roles);
 
             //free unused role numbers
             if (roles[*fit-1][s-1] != newRole && post_omega[roles[*fit-1][s-1]-1] == 0) {
@@ -366,8 +349,8 @@ void Sampler_t::resample_roles_inf(void) {
                 roles[*fit-1][s-1] = newRole;
             }
 
-            frameSet->remove(oldFrame);
-            frameSet->insert(frameSet->makeKey(roles[*fit-1]));
+            frameSet.remove(oldFrame);
+            frameSet.insert(frameSet.makeKey(roles[*fit-1]));
 
             post_omega[roles[*fit-1][s-1]-1]++;
             post_omega[R]++;
@@ -388,8 +371,10 @@ void Sampler_t::resample_hypers(unsigned int iters) {
                 double oldBeta = beta[*rit-1][v-1];
                 beta[*rit-1][v-1] = max(
                     beta[*rit-1][v-1]*
-                    (digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v-1])-digamma(beta[*rit-1][v-1]))/
-                    (digamma(post_theta[*rit-1][V]+beta[*rit-1][V])-digamma(beta[*rit-1][V])),
+                    (dist->digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v-1])-
+                     dist->digamma(beta[*rit-1][v-1]))/
+                    (dist->digamma(post_theta[*rit-1][V]+beta[*rit-1][V])-
+                     dist->digamma(beta[*rit-1][V])),
                     beta0);
                 if (post_theta[*rit-1][V] == 0) beta[*rit-1][v-1] = beta0;
                 beta[*rit-1][V] += beta[*rit-1][v-1] - oldBeta;
@@ -406,16 +391,16 @@ void Sampler_t::resample_hypers(unsigned int iters) {
 
         //sample delta
 
-        double eta = sample_Bet(delta + 1, tables);
+        double eta = dist->sampleBeta(delta + 1, tables);
         double pi = adelta + used_frames.size() - 1;
         double rate = 1.0 / bdelta - log(eta);
         pi = pi / (pi + rate * tables);
     
-        unsigned int cc = sample_Bern(pi);
+        unsigned int cc = dist->sampleBernoulli(pi);
         if (cc == 1) {
-            delta = sample_Gam(adelta + used_frames.size(), 1.0 / rate);
+            delta = dist->sampleGamma(adelta + used_frames.size(), 1.0 / rate);
         } else {
-            delta = sample_Gam(adelta + used_frames.size() - 1, 1.0 / rate);
+            delta = dist->sampleGamma(adelta + used_frames.size() - 1, 1.0 / rate);
         }
     
         //sample alpha
@@ -423,52 +408,15 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             double sum_log_w = 0.0;
             double sum_s = 0.0;
             for (unsigned int u=1; u<=U; ++u) {
-                sum_log_w += log(sample_Bet(alpha + 1, w[u-1].size()));
-                sum_s += (double)sample_Bern(w[u-1].size() / (w[u-1].size() + alpha));
+                sum_log_w += log(dist->sampleBeta(alpha + 1, w[u-1].size()));
+                sum_s += (double)dist->sampleBernoulli(w[u-1].size() / (w[u-1].size() + alpha));
             }
             rate = 1.0 / balpha - sum_log_w;
-            alpha = sample_Gam(aalpha + tables - sum_s, 1.0 / rate);
+            alpha = dist->sampleGamma(aalpha + tables - sum_s, 1.0 / rate);
 
         }
     }
 }
-
-
-Sampler_t::~Sampler_t() {
-    
-    if (initialized) {
-
-        /*
-        for (unsigned int f=1; f<=F; ++f) {
-            free(roles[f-1]);
-        }
-        free(roles);*/
-        
-        /*
-        for (unsigned int r=1; r<=R; ++r) {
-            free(post_theta[r-1]);
-        }
-        free(post_theta);
-        */
-
-        //free(post_omega);
-
-        //for (unsigned int u=1; u<=U; ++u) {
-            //free(post_phi[u-1]);
-        //    free(frames[u-1]);
-        //}
-        //free(post_phi);
-        //free(frames);
-
-        delete frameSet;
-       
-        //for (unsigned int r=0; r<R; ++r) {
-        //    free(beta[r]);
-        //} 
-    }
-
-}
-
 
 void Sampler_t::sample(void) {
     cout << " frames..." << flush;
@@ -547,9 +495,9 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
         }
 
         if(infinite_F || infinite_R) {
-            cout << "...packing frames and roles.";
+            //cout << "...packing frames and roles.";
             pack_FR();
-            cout << endl;
+            //cout << endl;
         }
 
         if (!dump(outputDir + ss.str())) {
@@ -573,25 +521,13 @@ unsigned int Sampler_t::createNewRole(void) {
     } else {
         R++;
         role = R;
-        //beta.push_back((double *) malloc(sizeof(double) * (V + 1)));
         beta.push_back(vector<double>(V + 1, beta0));
-        //post_theta = (double**) realloc(post_theta, sizeof(double*) * R);
-        //post_theta[R-1] = (double*) malloc(sizeof(double) * (V + 1));
         post_theta.push_back(vector<double>(V + 1, 0));
-        //for (unsigned int v=1; v<=V; ++v) {
-        //    post_theta[R-1][v-1] = 0;
-        //}
-        //post_theta[R-1][V] = 0;
-
-        //post_omega = (double*) realloc(post_omega, sizeof(double) * (R + 1));
         post_omega.push_back(0);
         post_omega[R] = post_omega[R-1];
         post_omega[R-1] = 0;
-        
     }
     beta[role-1][V] = V*beta0;
-    //for (unsigned int v=1; v<=V; ++v) beta[role-1][v] = beta0;
-
     used_roles.insert(role);
     return role;
 }
@@ -603,8 +539,6 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
         map<unsigned short int, double> post_roles;
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end();
                 ++rit) {
-            //post_roles[*rit] = ldf_Mult_smooth(1, beta[*rit-1], pos[s-1], post_theta[*rit-1], 1, V) +
-            //    log(gamma + post_omega[*rit-1]);
             post_roles[*rit] = BOUNDPROB(
                 log(post_theta[*rit-1][pos[s-1]-1] + beta[*rit-1][pos[s-1]-1]) -
                 log(post_theta[*rit-1][V] + beta[*rit-1][V]) +
@@ -614,8 +548,8 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
         post_roles[R + 1] = log(gamma) - log(V);
 
         //sample role id
-        normalizeLogMult(post_roles);
-        unsigned int newRole = sampleMultinomial(post_roles);
+        dist->normalizeLogMult(post_roles);
+        unsigned int newRole = dist->sampleMultinomial(post_roles);
         if (newRole == R + 1) {
             frame[s-1] = createNewRole();
         } else {
@@ -623,7 +557,7 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
         }
     }
 
-    if(frameSet->inside(frameSet->makeKey(frame))) 
+    if(frameSet.inside(frameSet.makeKey(frame))) 
         return false;
     else
         return true;
@@ -640,13 +574,10 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
         F++;
         frameId = F;
         for (unsigned int u = 1; u <= U; ++u) {
-            //post_phi[u-1] = (double*) realloc(post_phi[u-1], sizeof(double) * (F + 1));
             post_phi[u-1].push_back(0);
             post_phi[u-1][F] = post_phi[u-1][F-1];
             post_phi[u-1][F-1] = 0;
         }
-        //roles = (unsigned int**) realloc(roles, sizeof(unsigned int*) * F);
-        //roles[F-1] = (unsigned int*) malloc(sizeof(unsigned int) * S);
         roles.push_back(vector<unsigned int>(S, 0));
         fc_f.push_back(0);
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
@@ -660,8 +591,8 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
         post_omega[R]++;
     }
 
-    FrameKey_t fk = frameSet->makeKey(roles[frameId-1]);
-    frameSet->insert(fk);
+    FrameKey_t fk = frameSet.makeKey(roles[frameId-1]);
+    frameSet.insert(fk);
     
     return frameId;
 }
@@ -706,13 +637,10 @@ void Sampler_t::pack_FR(void) {
             frames[u-1][t-1] = tmp_F[frames[u-1][t-1]];
         }
     }
-    //unsigned int** tmp_roles; 
     vector<vector<unsigned int> > tmp_roles;
     fc_f.clear();
     fc_fsw.clear();
-    //tmp_roles = (unsigned int**) malloc(sizeof(unsigned int*) * used_frames.size());
     for (unsigned int f=1; f<=used_frames.size(); ++f) {
-        //tmp_roles[f-1] = (unsigned int*) malloc(sizeof(unsigned int) * S);
         tmp_roles.push_back(vector<unsigned int>(S, 0));
         fc_f.push_back(0);
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
@@ -720,21 +648,16 @@ void Sampler_t::pack_FR(void) {
 
     map<unsigned int, double> tmp_tau;
     tmp_tau[0] = F;
-    frameSet->clear();
+    frameSet.clear();
     for (set<unsigned int>::const_iterator it = used_frames.begin(); it != used_frames.end(); ++it) {
         tmp_tau[tmp_F[*it-1]] = tau[*it];
         for (unsigned int s=1; s<=S; ++s) {
             tmp_roles[tmp_F[*it]-1][s-1] = tmp_R[roles[*it-1][s-1]];
         }
-        frameSet->insert(frameSet->makeKey(tmp_roles[tmp_F[*it]-1]));
+        frameSet.insert(frameSet.makeKey(tmp_roles[tmp_F[*it]-1]));
     }
     tau = tmp_tau;
 
-    /*
-    for (unsigned int f=1; f<=F; ++f) {
-        free(roles[f-1]);
-    }
-    free(roles);*/
     roles = tmp_roles;
     
     for(unsigned int u=1; u<=U; ++u) {
@@ -760,4 +683,10 @@ void Sampler_t::pack_FR(void) {
     resample_post_theta();
     resample_post_omega();
 
+}
+
+Sampler_t::~Sampler_t() {
+    if (initialized) {
+        delete dist;
+    }
 }
