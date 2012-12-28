@@ -12,14 +12,16 @@ bool Sampler_t::initialize(bool recovery) {
     srand((unsigned)time(0));   // initialize random number generator
     cout << "Allocating memory..." << endl;
 
-    frames = (unsigned int**) malloc(sizeof(unsigned int*) * U);
+    //frames = (unsigned int**) malloc(sizeof(unsigned int*) * U);
     for (unsigned int u=1; u<=U; ++u) {
-        frames[u-1] = (unsigned int*) malloc(sizeof(unsigned int) * w[u-1].size());
+        frames.push_back(vector<unsigned int>(w[u-1].size(), 0));
+        //frames[u-1] = (unsigned int*) malloc(sizeof(unsigned int) * w[u-1].size());
     }
 
-    roles = (unsigned int**) malloc(sizeof(unsigned int*) * F);
+    //roles = (unsigned int**) malloc(sizeof(unsigned int*) * F);
     for (unsigned int f=1; f<=F; ++f) {
-        roles[f-1] = (unsigned int*) malloc(sizeof(unsigned int) * S);
+        //roles[f-1] = (unsigned int*) malloc(sizeof(unsigned int) * S);
+        roles.push_back(vector<unsigned int>(S, 0));
         fc_f.push_back(0);
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
     }
@@ -41,7 +43,7 @@ bool Sampler_t::initialize(bool recovery) {
         beta.push_back(vector<double>(V + 1, 0));
     }
 
-    post_omega = (double*) malloc(sizeof(double) * (R +1));
+    //post_omega = (double*) malloc(sizeof(double) * (R +1));
 
     if (!recovery) {
         cout << "Initializing variables..." << endl;
@@ -123,10 +125,12 @@ void Sampler_t::initialize_post_theta(void) {
 }
 
 void Sampler_t::initialize_post_omega(void) {
-    for (unsigned int r=1; r<=R; ++r) {
-        post_omega[r-1] = 0;
+    //for (unsigned int r=1; r<=R; ++r) {
+    for (unsigned int r=1; r<=R+1; ++r) {
+        //post_omega[r-1] = 0;
+        post_omega.push_back(0);
     }
-    post_omega[R] = 0;
+    //post_omega[R] = 0;
     resample_post_omega();
 }
 

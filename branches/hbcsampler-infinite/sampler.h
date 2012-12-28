@@ -71,12 +71,14 @@ private:
     double gamma;
     double delta;
 
-    unsigned int** frames;
-    unsigned int** roles;
+    //unsigned int** frames;
+    //unsigned int** roles;
+    vector<vector<unsigned int> > frames;
+    vector<vector<unsigned int> > roles;
 
     vector<vector<double> > post_phi;
     vector<vector<double> > post_theta;
-    double* post_omega;
+    vector<double> post_omega;
 
     bool infinite_F;
     bool infinite_R;

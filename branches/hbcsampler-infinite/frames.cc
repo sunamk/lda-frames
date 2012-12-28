@@ -8,15 +8,16 @@
 #include <iostream>
 
 
-FrameKey_t Frames_t::makeKey(unsigned int *f) {
-    FrameKey_t k;
+FrameKey_t Frames_t::makeKey(vector<unsigned int> &f) {
+    FrameKey_t k = f;
+    /*    
     for (unsigned int i = 0; i < S; ++i) {
         k.push_back(f[i]);
-    }
+    }*/
     return k;
 }
 
-FrameKey_t Frames_t::makeKey(unsigned int *f, unsigned int s, unsigned int r) {
+FrameKey_t Frames_t::makeKey(vector<unsigned int> &f, unsigned int s, unsigned int r) {
     FrameKey_t k;
     for (unsigned int i = 0; i < S; ++i) {
         if (i == s-1) {

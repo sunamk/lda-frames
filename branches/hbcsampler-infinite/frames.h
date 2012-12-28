@@ -17,9 +17,9 @@ class Frames_t {
 public:
     Frames_t(unsigned int _S): S(_S) {};
 
-    FrameKey_t makeKey(unsigned int *f);
+    FrameKey_t makeKey(vector<unsigned int> &f);
     
-    FrameKey_t makeKey(unsigned int *f, unsigned int s, unsigned int r);
+    FrameKey_t makeKey(vector<unsigned int> &f, unsigned int s, unsigned int r);
 
     bool inside(FrameKey_t frameKey);
 
