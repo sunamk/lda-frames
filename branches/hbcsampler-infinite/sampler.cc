@@ -365,6 +365,7 @@ void Sampler_t::resample_roles_inf(void) {
 void Sampler_t::resample_hypers(unsigned int iters) {
 
     //sample beta
+    /*
     for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
         for (unsigned int v=1; v<=V; ++v) {
             for (unsigned int iter = 0; iter < iters; ++iter) {
@@ -381,7 +382,7 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             }
 
         }
-    }
+    }*/
 
     if (infinite_F) {
         double bdelta = 1.0;

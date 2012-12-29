@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     unsigned int frames = 0;
     unsigned int roles = 0;
     unsigned int iters = 1000;
-    float alpha = 5.0;
+    float alpha = 0.1;
     float beta = 0.1;
     float gamma = 0.1;
     float delta = 1.0;
@@ -38,23 +38,23 @@ int main(int argc, char **argv) {
     po::options_description desc("Allowed options");
 
     desc.add_options()
-        ("help", "produce help message")
-        ("input-file", po::value<string>(), "input file name")
-        ("output-directory", po::value<string>(),"output directory" )
+        ("help", "Print this help message.")
+        ("input-file", po::value<string>(), "Path to the input file.")
+        ("output-directory", po::value<string>(),"Path to the output directory." )
         ("frames,F", po::value<unsigned int>(), 
-            "sampled frames (if the value is not specified, it is chosen automatically)")
+            "Number of frames (if the value is not specified, it is chosen automatically).")
         ("roles,R", po::value<unsigned int>(),
-            "sampled roles (if the value is not specified, it is chosen automatically)")
-        ("iters,I", po::value<unsigned int>(), "iterations")
-        ("alpha", po::value<float>(), "alpha")
-        ("beta", po::value<float>(), "beta")
-        ("gamma", po::value<float>(), "gamma")
-        ("delta", po::value<float>(), "delta")
+            "Number of roles (if the value is not specified, it is chosen automatically).")
+        ("iters,I", po::value<unsigned int>(), "Number of iterations (default is 1000).")
+        ("alpha", po::value<float>(), "Alpha hyperparameter.")
+        ("beta", po::value<float>(), "Beta parameter.")
+        ("gamma", po::value<float>(), "Gamma parameter.")
+        ("delta", po::value<float>(), "Delta parameter.")
         ("seed", po::value<long int>(), 
-        "random number generator seed (0 = current time)")
-        ("all-samples,A", "save all samples")
-        ("recovery", "try to recover data and continue sampling")
-        ("print,P", "print resulting frames and roles")
+        "Random number generator seed (0 = current time).")
+        ("all-samples,A", "Save samples of all iterations.")
+        ("recovery", "Try to recover data and continue sampling.")
+        ("print,P", "Print sampled frames and roles to stdout.")
     ;
 
     po::positional_options_description p;
@@ -106,6 +106,7 @@ int main(int argc, char **argv) {
     if (vm.count("frames")) {
         frames = vm["frames"].as<unsigned int>();
     }
+    if (frames == 0) alpha = 5.0;
     
     if (vm.count("roles")) {
         roles = vm["roles"].as<unsigned int>();
