@@ -384,6 +384,7 @@ void Sampler_t::resample_hypers(unsigned int iters) {
         }
     }*/
 
+
     if (infinite_F) {
         double bdelta = 1.0;
         double adelta = 1.0;
@@ -439,7 +440,8 @@ void Sampler_t::sample(void) {
     
 }
 
-bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples) {
+bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int burn_in, bool allSamples,
+        bool no_hypers, bool no_perplexity, bool rm) {
 
     if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     int status = mkdir(outputDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -455,58 +457,73 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, bool allSamples)
     }
 
     //remove old files
-    DIR *dp;
-    struct dirent *dirp;
-    if((dp  = opendir(outputDir.c_str())) == NULL) {
-        cout << "Error(" << errno << ") opening " << outputDir << endl;
-        return false;
-    }
+    if (rm) {
+        DIR *dp;
+        struct dirent *dirp;
+        if((dp  = opendir(outputDir.c_str())) == NULL) {
+            cout << "Error(" << errno << ") opening " << outputDir << endl;
+            return false;
+        }
 
-    while ((dirp = readdir(dp)) != NULL) {
-        string fname = string(dirp->d_name);
-        if (fname.length() > 5 && 
-            fname.substr(fname.length()-5, 5).compare(".smpl") == 0) {
-            if (remove((outputDir + fname).c_str()) != 0) {
-                cout << "Cannot remove file " << outputDir + fname << endl;
-                return false;
+        while ((dirp = readdir(dp)) != NULL) {
+            string fname = string(dirp->d_name);
+            if (fname.length() > 5 && 
+                fname.substr(fname.length()-5, 5).compare(".smpl") == 0) {
+                if (remove((outputDir + fname).c_str()) != 0) {
+                    cout << "Cannot remove file " << outputDir + fname << endl;
+                    return false;
+                }
             }
         }
+        closedir(dp);
     }
-    closedir(dp);
 
     for (unsigned int i = startIter; i < iters+1; ++i) {
         cout << "Iteration no. " << i << ":";
         cout << flush;
+        if (i>burn_in && !no_hypers) {
+            if(reestimate_F) infinite_F = true;
+            if(reestimate_R) infinite_R = true;
+        }
         sample();
-        if (i>=minHyperIter) {
+        if (i>burn_in && !no_hypers) {
             cout << "hyperparameters..." << flush;
             resample_hypers(20);
         }
-        cout << "perplexity..." << flush;
-        double p = perplexity();
+        double p=0;
+        if (!no_perplexity) {
+            cout << "perplexity..." << flush;
+            p = perplexity();
+            if (p < bestPerplexity || i==1) bestPerplexity = p;
+        }
         cout << " (" << used_frames.size() << " frames, " 
              << used_roles.size() << " roles).";
-        cout << " Perplexity: " << p;
-        cout << endl;
+        if (!no_perplexity) {
+            cout << " Perplexity: " << p;
+        }
 
+        if(infinite_F || infinite_R) {
+            pack_FR();
+        }
+
+        if (p==bestPerplexity) {
+            cout << " *";
+            if (!dump(outputDir)) {
+                return false;
+            }
+            if (!writeLog(outputDir, i, iters)) {
+                return false;
+            }
+        }
 
         stringstream ss;
         if (allSamples) {
             ss << i << "-";
+            if (!dump(outputDir + ss.str())) {
+                return false;
+            }
         }
-
-        if(infinite_F || infinite_R) {
-            //cout << "...packing frames and roles.";
-            pack_FR();
-            //cout << endl;
-        }
-
-        if (!dump(outputDir + ss.str())) {
-            return false;
-        }
-        if (!writeLog(outputDir, i, iters)) {
-            return false;
-        }
+        cout << endl;
     }
     
     return true;

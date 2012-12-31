@@ -44,7 +44,7 @@ bool Sampler_t::initialize(bool recovery) {
         initialize_post_theta();
         initialize_post_omega();
     }
-
+    bestPerplexity = 0;
     initialized = true;
     return true;
 

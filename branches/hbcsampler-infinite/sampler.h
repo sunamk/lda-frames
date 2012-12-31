@@ -24,12 +24,15 @@ public:
               float _beta,
               float _gamma,
               float _delta,
-              long int _seed): F(_F), R(_R), S(0), U(0), V(0),
+              long int _seed,
+              bool _reestimate_F,
+              bool _reestimate_R): F(_F), R(_R), S(0), U(0), V(0),
                             alpha(_alpha), beta0(_beta), gamma(_gamma),
                             delta(_delta),
                             seed(_seed),
+                            reestimate_F(_reestimate_F), reestimate_R(_reestimate_R),
                             infinite_F(false), infinite_R(false),
-                            startIter(1), minHyperIter(50), initialized(false)
+                            startIter(1), initialized(false)
                             {};
 
     ~Sampler_t();
@@ -42,7 +45,8 @@ public:
 
     bool dump(string prefix);
 
-    bool sampleAll(string outputDir, unsigned int iters, bool allSamples);
+    bool sampleAll(string outputDir, unsigned int iters, unsigned int burn_in, bool allSamples, 
+            bool no_hypers, bool no_perplexity, bool rm);
 
     void printFrames(void);
 
@@ -52,11 +56,13 @@ public:
 
     bool recoverParameters(string logDir);
 
-    bool recoverData(string dataDir);
+    bool recoverData(string dataDir, unsigned int burn_in);
     
-    //infinite LDA-frames
-    unsigned int createNewFrame(vector<unsigned int> &frame);
-    unsigned int createNewRole(void);
+    double perplexity(void);
+
+    double bestPerplexity;
+    unsigned int requiredIters;
+    
 
 private:
     unsigned int F;
@@ -79,6 +85,8 @@ private:
     vector<vector<double> > post_theta;
     vector<double> post_omega;
 
+    bool reestimate_F;
+    bool reestimate_R;
     bool infinite_F;
     bool infinite_R;
 
@@ -86,17 +94,14 @@ private:
 
     string inputFile;
     unsigned int startIter;
-    unsigned int minHyperIter;
   
     vector<vector<vector<unsigned int> > > w;//inputData;
     vector<unsigned int> fc_f;
     vector<vector<vector<unsigned int> > > fc_fsw;
 
-    //infinite LDA-frames
     set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
     map<unsigned int, double> tau;
     unsigned int tables;
-    void pack_FR(void);
 
     //sampling
     void resample_post_phi(void);
@@ -119,8 +124,12 @@ private:
     void initialize_post_theta(void);
     void initialize_post_omega(void);
     void initialize_infinite_vars(void);
+    
+    //infinite LDA-frames
+    void pack_FR(void);
+    unsigned int createNewFrame(vector<unsigned int> &frame);
+    unsigned int createNewRole(void);
 
-    double perplexity(void);
 };
 
 #endif
