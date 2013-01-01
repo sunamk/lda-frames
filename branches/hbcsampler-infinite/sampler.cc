@@ -71,7 +71,7 @@ void Sampler_t::resample_tau(void) {
         fc[id] = 0;
         for (unsigned int u=1; u<=U; ++u) {
             if (post_phi[u-1][*it-1] > 1) {
-                fc[id] += dist->sampleAntoniak(alpha * tau[*it], post_phi[u-1][*it-1]);
+                fc[id] += dist->sampleAntoniak(alpha0 * tau[*it], post_phi[u-1][*it-1]);
             } else {
                 fc[id] += post_phi[u-1][*it-1];
             }
@@ -117,7 +117,7 @@ void Sampler_t::resample_frames(void) {
                             log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
                             ); 
                 }
-                post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha));
+                post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha[*fit-1]));
             }
 
             //sample frame
@@ -169,12 +169,12 @@ void Sampler_t::resample_frames_inf(void) {
                             log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
                             );
                 }
-                post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha*tau[*fit]));
+                post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha0*tau[*fit]));
             }
             //sample new frame
             vector<unsigned int> frame(S, 0);
             if (sample_new_frame(frame, w[u-1][t-1])) {
-                double prod = BOUNDPROB(log(alpha*tau[0]));
+                double prod = BOUNDPROB(log(alpha0*tau[0]));
                 for (unsigned int s = 1; s <= S; ++s) {
                     prod -= BOUNDPROB(log(V));
                 }
@@ -419,13 +419,22 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             double sum_log_w = 0.0;
             double sum_s = 0.0;
             for (unsigned int u=1; u<=U; ++u) {
-                sum_log_w += log(dist->sampleBeta(alpha + 1, w[u-1].size()));
-                sum_s += (double)dist->sampleBernoulli(w[u-1].size() / (w[u-1].size() + alpha));
+                sum_log_w += log(dist->sampleBeta(alpha0 + 1, w[u-1].size()));
+                sum_s += (double)dist->sampleBernoulli(w[u-1].size() / (w[u-1].size() + alpha0));
             }
             rate = 1.0 / balpha - sum_log_w;
-            alpha = dist->sampleGamma(aalpha + tables - sum_s, 1.0 / rate);
+            alpha0 = dist->sampleGamma(aalpha + tables - sum_s, 1.0 / rate);
 
         }
+    } else {
+        //sample alpha
+        //TODO
+        /*
+        cout << endl;
+        for (unsigned int f=1; f<=F; ++f) {
+            cout << alpha[f-1] << " ";
+        }
+        cout << endl;*/
     }
 }
 

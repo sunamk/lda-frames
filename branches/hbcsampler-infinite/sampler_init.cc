@@ -20,6 +20,7 @@ bool Sampler_t::initialize(bool recovery) {
         roles.push_back(vector<unsigned int>(S, 0));
         fc_f.push_back(0);
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
+        alpha.push_back(alpha0);
     }
 
     for (unsigned int u=1; u<=U; ++u) {

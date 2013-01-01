@@ -27,7 +27,7 @@ public:
               long int _seed,
               bool _reestimate_F,
               bool _reestimate_R): F(_F), R(_R), S(0), U(0), V(0),
-                            alpha(_alpha), beta0(_beta), gamma0(_gamma),
+                            alpha0(_alpha), beta0(_beta), gamma0(_gamma),
                             delta(_delta),
                             seed(_seed),
                             reestimate_F(_reestimate_F), reestimate_R(_reestimate_R),
@@ -70,7 +70,8 @@ private:
     unsigned int S;
     unsigned int U;
     unsigned int V;
-    double alpha;
+    double alpha0;
+    vector<double> alpha;
     double beta0;
     vector<double> beta;
     double gamma0;
