@@ -28,7 +28,9 @@ bool Sampler_t::initialize(bool recovery) {
 
     for (unsigned int r=1; r<=R; ++r) {
         post_theta.push_back(vector<double>(V + 1, 0));
+        gamma[r] = gamma0;
     }
+    gamma[0] = gamma0;
 
     if (!recovery) {
         cout << "Initializing variables..." << endl;

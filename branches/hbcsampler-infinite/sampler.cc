@@ -194,6 +194,7 @@ void Sampler_t::resample_frames_inf(void) {
                     if (post_omega[roles[frames[u-1][t-1]-1][s-1]-1] == 0 && infinite_R) {
                         unused_roles.insert(roles[frames[u-1][t-1]-1][s-1]);
                         used_roles.erase(roles[frames[u-1][t-1]-1][s-1]);
+                        gamma.erase(roles[frames[u-1][t-1]-1][s-1]);
                     }
                 }
                 unused_frames.insert(frames[u-1][t-1]);
@@ -220,6 +221,7 @@ void Sampler_t::resample_frames_inf(void) {
                     if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0) {
                         used_roles.erase(frame[s-1]);
                         unused_roles.insert(frame[s-1]);
+                        gamma.erase(frame[s-1]);
                     }
                 }
             }
@@ -269,7 +271,7 @@ void Sampler_t::resample_roles(void) {
                             log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
-                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma));
+                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma[*rit]));
                 }
             }
 
@@ -321,7 +323,7 @@ void Sampler_t::resample_roles_inf(void) {
                             log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
-                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma));
+                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma[*rit]));
                 }
             }
 
@@ -330,7 +332,7 @@ void Sampler_t::resample_roles_inf(void) {
             for (unsigned int v = 1; v<=V; ++v) {
                 prod -= fc_fsw[*fit-1][s-1][v-1]*log(V);
             }
-            post_roles[R + 1] = prod + BOUNDPROB(log(gamma));
+            post_roles[R + 1] = prod + BOUNDPROB(log(gamma[0]));
             
 
             //Sample role id
@@ -341,6 +343,7 @@ void Sampler_t::resample_roles_inf(void) {
             if (roles[*fit-1][s-1] != newRole && post_omega[roles[*fit-1][s-1]-1] == 0) {
                 unused_roles.insert(roles[*fit-1][s-1]);
                 used_roles.erase(roles[*fit-1][s-1]);
+                gamma.erase(roles[*fit-1][s-1]);
             }
             //create a new role if required
             if (newRole == R + 1) {
@@ -381,6 +384,15 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             beta[V] += beta[v-1] - oldBeta;
         }
     }
+
+    //sample gamma
+    //TODO
+    /*
+    cout << endl;
+    for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit != used_roles.end(); ++rit) {
+        cout << "(" <<*rit << "," << gamma[*rit] << ") ";
+    }
+    cout << gamma[0] << endl;*/
 
     if (infinite_F) {
         double bdelta = 1.0;
@@ -542,6 +554,7 @@ unsigned int Sampler_t::createNewRole(void) {
         post_omega[R-1] = 0;
     }
     used_roles.insert(role);
+    gamma[role] = gamma0;
     return role;
 }
 
@@ -555,10 +568,10 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
             post_roles[*rit] = BOUNDPROB(
                 log(post_theta[*rit-1][pos[s-1]-1] + beta[pos[s-1]-1]) -
                 log(post_theta[*rit-1][V] + beta[V]) +
-                log(gamma + post_omega[*rit-1])
+                log(gamma[*rit] + post_omega[*rit-1])
                 );
         }
-        post_roles[R + 1] = log(gamma) - log(V);
+        post_roles[R + 1] = log(gamma[0]) - log(V);
 
         //sample role id
         dist->normalizeLogMult(post_roles);
@@ -636,7 +649,9 @@ void Sampler_t::pack_FR(void) {
 
     //pack frames and roles    
     map<unsigned int, unsigned int> tmp_F, tmp_R;
+    map<unsigned int, double >tmp_gamma;
     unsigned int f=0, r=0;
+    tmp_gamma[0] = gamma[0];
     for (set<unsigned int>::const_iterator it=used_frames.begin();
             it!= used_frames.end(); ++it) {
         tmp_F[*it] = ++f;
@@ -644,6 +659,7 @@ void Sampler_t::pack_FR(void) {
     for (set<unsigned int>::const_iterator it=used_roles.begin();
             it!= used_roles.end(); ++it) {
         tmp_R[*it] = ++r;
+        tmp_gamma[r] = gamma[*it];
     }
     for(unsigned int u=1; u<=U; ++u) {
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
@@ -670,7 +686,7 @@ void Sampler_t::pack_FR(void) {
         frameSet.insert(frameSet.makeKey(tmp_roles[tmp_F[*it]-1]));
     }
     tau = tmp_tau;
-
+    gamma = tmp_gamma;
     roles = tmp_roles;
     
     for(unsigned int u=1; u<=U; ++u) {

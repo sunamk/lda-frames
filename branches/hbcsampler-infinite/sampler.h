@@ -27,7 +27,7 @@ public:
               long int _seed,
               bool _reestimate_F,
               bool _reestimate_R): F(_F), R(_R), S(0), U(0), V(0),
-                            alpha(_alpha), beta0(_beta), gamma(_gamma),
+                            alpha(_alpha), beta0(_beta), gamma0(_gamma),
                             delta(_delta),
                             seed(_seed),
                             reestimate_F(_reestimate_F), reestimate_R(_reestimate_R),
@@ -73,7 +73,8 @@ private:
     double alpha;
     double beta0;
     vector<double> beta;
-    double gamma;
+    double gamma0;
+    map<unsigned int, double> gamma;
     double delta;
     long int seed;
     Distributions_t *dist;
