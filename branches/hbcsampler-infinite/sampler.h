@@ -72,7 +72,7 @@ private:
     unsigned int V;
     double alpha;
     double beta0;
-    vector<vector<double> > beta;
+    vector<double> beta;
     double gamma;
     double delta;
     long int seed;

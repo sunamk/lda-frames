@@ -30,10 +30,6 @@ bool Sampler_t::initialize(bool recovery) {
         post_theta.push_back(vector<double>(V + 1, 0));
     }
 
-    for (unsigned int r=0; r<R; ++r) {
-        beta.push_back(vector<double>(V + 1, 0));
-    }
-
     if (!recovery) {
         cout << "Initializing variables..." << endl;
         initialize_beta();
@@ -93,12 +89,10 @@ void Sampler_t::initialize_post_phi(void) {
 }
 
 void Sampler_t::initialize_beta(void) {
-    for (unsigned int r=1; r<=R; ++r) {
-        beta[r-1][V]=V*beta0;
-        for (unsigned int v = 1; v<=V; ++v) {
-            beta[r-1][v-1] = beta0;
-        }
+    for (unsigned int v = 1; v<=V; ++v) {
+        beta.push_back(beta0);
     }
+    beta.push_back(V*beta0);
 }
 
 void Sampler_t::initialize_post_theta(void) {

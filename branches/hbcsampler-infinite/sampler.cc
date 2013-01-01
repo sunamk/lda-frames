@@ -113,8 +113,8 @@ void Sampler_t::resample_frames(void) {
                 for (unsigned int s = 1; s <= S; ++s) {
                     prod += BOUNDPROB(
                             log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] + 
-                            beta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1]) -
-                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
+                            beta[w[u-1][t-1][s-1]-1]) -
+                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
                             ); 
                 }
                 post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha));
@@ -165,8 +165,8 @@ void Sampler_t::resample_frames_inf(void) {
                 for (unsigned int s = 1; s <= S; ++s) {
                     prod += BOUNDPROB(
                             log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] +
-                            beta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1]) -
-                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[roles[*fit-1][s-1]-1][V])
+                            beta[w[u-1][t-1][s-1]-1]) -
+                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
                             );
                 }
                 post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha*tau[*fit]));
@@ -265,8 +265,8 @@ void Sampler_t::resample_roles(void) {
                     for (unsigned int v = 1; v<=V; ++v) {
                         prod += fc_fsw[*fit-1][s-1][v-1]*BOUNDPROB(                                   
                             log(post_theta[*rit-1][v-1] +
-                            beta[*rit-1][v-1]) -
-                            log(post_theta[*rit-1][V] + beta[*rit-1][V])
+                            beta[v-1]) -
+                            log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
                     post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma));
@@ -317,8 +317,8 @@ void Sampler_t::resample_roles_inf(void) {
                     for (unsigned int v = 1; v<=V; ++v) {
                         prod += fc_fsw[*fit-1][s-1][v-1]*BOUNDPROB(
                             log(post_theta[*rit-1][v-1] +
-                            beta[*rit-1][v-1]) -
-                            log(post_theta[*rit-1][V] + beta[*rit-1][V])
+                            beta[v-1]) -
+                            log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
                     post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma));
@@ -365,25 +365,22 @@ void Sampler_t::resample_roles_inf(void) {
 void Sampler_t::resample_hypers(unsigned int iters) {
 
     //sample beta
-    /*
-    for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit!=used_roles.end(); ++rit) {
-        for (unsigned int v=1; v<=V; ++v) {
-            for (unsigned int iter = 0; iter < iters; ++iter) {
-                double oldBeta = beta[*rit-1][v-1];
-                beta[*rit-1][v-1] = max(
-                    beta[*rit-1][v-1]*
-                    (dist->digamma(post_theta[*rit-1][v-1]+beta[*rit-1][v-1])-
-                     dist->digamma(beta[*rit-1][v-1]))/
-                    (dist->digamma(post_theta[*rit-1][V]+beta[*rit-1][V])-
-                     dist->digamma(beta[*rit-1][V])),
-                    beta0);
-                if (post_theta[*rit-1][V] == 0) beta[*rit-1][v-1] = beta0;
-                beta[*rit-1][V] += beta[*rit-1][v-1] - oldBeta;
+    for (unsigned int v=1; v<=V; ++v) {
+        for (unsigned int iter = 0; iter < iters; ++iter) {
+            double oldBeta = beta[v-1];
+            double nsum = 0;
+            double dsum = 0;
+            for (set<unsigned int>::const_iterator rit = used_roles.begin(); 
+                        rit!=used_roles.end(); ++rit) {
+                nsum += dist->digamma(post_theta[*rit-1][v-1]+beta[v-1]); 
+                dsum += dist->digamma(post_theta[*rit-1][V]+beta[V]);
             }
-
+            beta[v-1] *=
+                (nsum - used_roles.size()*dist->digamma(beta[v-1]))/
+                (dsum - used_roles.size()*dist->digamma(beta[V]));
+            beta[V] += beta[v-1] - oldBeta;
         }
-    }*/
-
+    }
 
     if (infinite_F) {
         double bdelta = 1.0;
@@ -539,13 +536,11 @@ unsigned int Sampler_t::createNewRole(void) {
     } else {
         R++;
         role = R;
-        beta.push_back(vector<double>(V + 1, beta0));
         post_theta.push_back(vector<double>(V + 1, 0));
         post_omega.push_back(0);
         post_omega[R] = post_omega[R-1];
         post_omega[R-1] = 0;
     }
-    beta[role-1][V] = V*beta0;
     used_roles.insert(role);
     return role;
 }
@@ -558,8 +553,8 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end();
                 ++rit) {
             post_roles[*rit] = BOUNDPROB(
-                log(post_theta[*rit-1][pos[s-1]-1] + beta[*rit-1][pos[s-1]-1]) -
-                log(post_theta[*rit-1][V] + beta[*rit-1][V]) +
+                log(post_theta[*rit-1][pos[s-1]-1] + beta[pos[s-1]-1]) -
+                log(post_theta[*rit-1][V] + beta[V]) +
                 log(gamma + post_omega[*rit-1])
                 );
         }
