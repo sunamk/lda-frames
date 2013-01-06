@@ -381,10 +381,10 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             beta[v-1] *=
                 (nsum - used_roles.size()*dist->digamma(beta[v-1]))/
                 (dsum - used_roles.size()*dist->digamma(beta[V]));
+            if (beta[v-1]<=0) beta[v-1] = oldBeta;
             beta[V] += beta[v-1] - oldBeta;
         }
     }
-
     //sample gamma
     //TODO
     /*
@@ -392,7 +392,8 @@ void Sampler_t::resample_hypers(unsigned int iters) {
     for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit != used_roles.end(); ++rit) {
         cout << "(" <<*rit << "," << gamma[*rit] << ") ";
     }
-    cout << gamma[0] << endl;*/
+    cout << gamma[0] << endl;
+    */
 
     if (infinite_F) {
         double bdelta = 1.0;
@@ -429,12 +430,11 @@ void Sampler_t::resample_hypers(unsigned int iters) {
     } else {
         //sample alpha
         //TODO
-        /*
-        cout << endl;
-        for (unsigned int f=1; f<=F; ++f) {
-            cout << alpha[f-1] << " ";
-        }
-        cout << endl;*/
+        //for (unsigned int f=1; f<=F+1; ++f) {
+        //    cout << alpha[f-1] << " ";
+        //}
+        //cout << endl;
+        //*/
     }
 }
 

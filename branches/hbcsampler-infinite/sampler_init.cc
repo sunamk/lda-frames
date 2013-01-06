@@ -22,6 +22,7 @@ bool Sampler_t::initialize(bool recovery) {
         fc_fsw.push_back(vector<vector<unsigned int> >(S,vector<unsigned int>(V, 0)));
         alpha.push_back(alpha0);
     }
+    alpha.push_back(alpha0*F);
 
     for (unsigned int u=1; u<=U; ++u) {
         post_phi.push_back(vector<double>(F + 1, 0));
