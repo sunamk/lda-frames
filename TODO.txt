@@ -1,0 +1,4 @@
+* estimate gamma
+* estimate alpha for the finite version
+* empty roles
+* parallelization

@@ -15,11 +15,12 @@ typedef vector<unsigned int> FrameKey_t;
 
 class Frames_t {
 public:
-    Frames_t(unsigned int _S, unsigned int _R): S(_S), R(_R) {};
+    //Frames_t(unsigned int _S): S(_S) {};
+    void setS(unsigned int slots);
 
-    FrameKey_t makeKey(unsigned int *f);
+    FrameKey_t makeKey(vector<unsigned int> &f);
     
-    FrameKey_t makeKey(unsigned int *f, unsigned int s, unsigned int r);
+    FrameKey_t makeKey(vector<unsigned int> &f, unsigned int s, unsigned int r);
 
     bool inside(FrameKey_t frameKey);
 
@@ -29,10 +30,11 @@ public:
 
     static void printKey(FrameKey_t k);
 
+    void clear(void);
+
     
 private:
     unsigned int S;
-    unsigned int R;
     set<FrameKey_t> frameSet;
 };
 
