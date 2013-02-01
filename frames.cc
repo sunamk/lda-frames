@@ -50,6 +50,12 @@ void Frames_t::printKey(FrameKey_t k) {
     std::cout << std::endl;
 }
 
+void Frames_t::printAll(void) {
+    for(set<FrameKey_t>::const_iterator it = frameSet.begin(); it!=frameSet.end(); ++it) {
+        printKey(*it);
+    }
+}
+
 void Frames_t::clear(void) {
     frameSet.clear();
 }

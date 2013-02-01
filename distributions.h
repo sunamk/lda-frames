@@ -29,6 +29,8 @@ public:
     unsigned int sampleMultinomial(map<unsigned short int, double> &v);
 
     unsigned int sampleMultinomial(vector<double> &v, double sum, unsigned int first);
+    
+    vector<unsigned int> sampleMultinomial(map<vector<unsigned int>, unsigned int> &v, unsigned int sum);
 
     unsigned int sampleBernoulli(double p);
 

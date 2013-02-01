@@ -5,6 +5,7 @@
  */
 
 #include <iostream>
+#include <math.h>
 #include "sampler.h"
 
 bool Sampler_t::initialize(bool recovery) {
@@ -37,8 +38,8 @@ bool Sampler_t::initialize(bool recovery) {
     if (!recovery) {
         cout << "Initializing variables..." << endl;
         initialize_beta();
-        initialize_frames();
         initialize_roles();
+        initialize_frames();
         initialize_infinite_vars();
         initialize_post_phi();
         initialize_post_theta();
@@ -51,31 +52,67 @@ bool Sampler_t::initialize(bool recovery) {
 }
 
 
+void Sampler_t::initialize_roles(void) {
+    if (!infinite_F) {
+        double boundary = 0;
+        unsigned int f = 1;
+        for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
+                it != framePatterns.end(); ++it) {
+            boundary += (((double) it->second) / positions)*(F - framePatterns.size()) + 1;
+            while (f <= round(boundary)) {
+                do {
+                   for (unsigned int s=1; s<=S; ++s) {
+                        if (it->first.at(s-1) == 0) {
+                            roles[f-1][s-1] = 0;
+                        } else {
+                            roles[f-1][s-1] = dist->randi(1, R);
+                        }
+                    }
+                } while (frameSet.inside(frameSet.makeKey(roles[f-1])));
+                FrameKey_t fk = frameSet.makeKey(roles[f-1]);
+                frameSet.insert(fk);
+                f++;
+            }
+        }
+        
+    } else {
+        //not necessarily
+        if (F != 1) { 
+            cout << "Internal error." << endl;
+            exit(10);
+        }
+        //sample frame for the first realization
+        for (unsigned int s=1; s<=S; ++s) {
+            if (w[0][0][s-1] == 0) {
+                roles[0][s-1] = 0;
+             } else {
+                roles[0][s-1] = dist->randi(1, R);
+             }
+        }
+        FrameKey_t fk = frameSet.makeKey(roles[0]);
+        frameSet.insert(fk);
+    }
+}
+
 void Sampler_t::initialize_frames(void) {
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t<=w[u-1].size(); ++t) {
             if (!infinite_F) {
-                frames[u-1][t-1] = dist->randi(1, F);
+                //do it better;
+                do {
+                    frames[u-1][t-1] = dist->randi(1, F);
+                } while (!checkPattern(w[u-1][t-1], roles[frames[u-1][t-1]-1]));
+
                 fc_f[frames[u-1][t-1]-1]++;
                 for (unsigned int s=1; s<=S; ++s) {
-                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                    if (w[u-1][t-1][s-1]>0) { //non-empty slot
+                        fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                    }
                 }
             } else {
                 frames[u-1][t-1] = 0;
             }
         }
-    }
-}
-
-void Sampler_t::initialize_roles(void) {
-    for (unsigned int f=1; f<=F; ++f) {
-        do {
-            for (unsigned int s=1; s<=S; ++s) {
-                roles[f-1][s-1] = dist->randi(1, R);
-            }
-        } while (frameSet.inside(frameSet.makeKey(roles[f-1])));
-        FrameKey_t fk = frameSet.makeKey(roles[f-1]);
-        frameSet.insert(fk);
     }
 }
 
@@ -119,6 +156,7 @@ void Sampler_t::initialize_post_omega(void) {
 }
 
 void Sampler_t::initialize_infinite_vars(void) {
+    //TODO all frames and roles may not be used
     for (unsigned int f=1; f<=F; ++f) {
         used_frames.insert(f);
         tau.insert(make_pair<unsigned int, bool>(f, 1.0/F+1));

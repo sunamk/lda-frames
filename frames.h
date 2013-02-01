@@ -30,6 +30,8 @@ public:
 
     static void printKey(FrameKey_t k);
 
+    void printAll(void);
+
     void clear(void);
 
     

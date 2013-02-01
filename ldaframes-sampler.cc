@@ -172,9 +172,7 @@ int main(int argc, char **argv) {
 
 
     Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed, reestimate_F, reestimate_R);
-    
 
-    
     if (!vm.count("recovery")) {
         cout << "Number of iterations is " << iters << "." << endl;
         cout << "Loading input data..." << endl;

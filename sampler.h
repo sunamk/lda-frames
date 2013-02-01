@@ -102,8 +102,14 @@ private:
     vector<vector<vector<unsigned int> > > fc_fsw;
 
     set<unsigned int> unused_frames, used_frames, unused_roles, used_roles;
+    map<unsigned int, unsigned int> frame_count;
     map<unsigned int, double> tau;
     unsigned int tables;
+
+    bool emptyFrames;
+    bool checkPattern(vector<unsigned int> &u, vector<unsigned int> &v);
+    map<vector<unsigned int>, unsigned int> framePatterns;
+    unsigned int positions;
 
     //sampling
     void resample_post_phi(void);

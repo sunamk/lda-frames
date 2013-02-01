@@ -36,9 +36,11 @@ void Sampler_t::resample_post_theta(void) {
         for (unsigned int u = 1; u <= U; ++u) {
             for (unsigned int t = 1; t <= w[u - 1].size(); ++t) {
                 for (unsigned int s = 1; s <= S; ++s) {
-                    post_theta[r-1][V] += (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
-                    post_theta[r-1][w[u-1][t-1][s-1]-1] += 
-                        (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
+                    if (w[u-1][t-1][s-1] > 0) {
+                        post_theta[r-1][V] += (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
+                        post_theta[r-1][w[u-1][t-1][s-1]-1] += 
+                            (r == roles[frames[u-1][t-1]-1][s-1]) ? 1 : 0;
+                    }
                 }
             }
         }
@@ -46,16 +48,16 @@ void Sampler_t::resample_post_theta(void) {
 }
 
 void Sampler_t::resample_post_omega(void) {
-    for (unsigned int f = 1; f <= F; ++f) {
-        for (unsigned int s = 1; s <= S; ++s) {
-             post_omega[roles[f-1][s-1]-1] = 0;
-        }
+    for (unsigned int r = 1; r <= R; ++r) {
+        post_omega[r-1] = 0;
     }
     post_omega[R] = 0;
     for (unsigned int f = 1; f <= F; ++f) {
         for (unsigned int s = 1; s <= S; ++s) {
-            post_omega[roles[f-1][s-1]-1]++;
-            post_omega[R]++;
+            if (roles[f-1][s-1] > 0) {
+                post_omega[roles[f-1][s-1]-1]++;
+                post_omega[R]++;
+            }
         }
     }
 }
@@ -98,9 +100,11 @@ void Sampler_t::resample_frames(void) {
 
             //remove old values
             for (unsigned int s = 1; s <= S; ++s) {
-                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
-                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
-                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+                if (w[u-1][t-1][s-1] != 0) {
+                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
+                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
+                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+                }
             }
             post_phi[u-1][F]--;
             post_phi[u-1][frames[u-1][t-1]-1]--;
@@ -109,13 +113,19 @@ void Sampler_t::resample_frames(void) {
             //compute frame distribution
             for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end(); 
                     ++fit) {
+
+                //skip frames that don't satisfy given pattern
+                if (emptyFrames && !checkPattern(roles[*fit-1], w[u-1][t-1])) continue;
+
                 double prod = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod += BOUNDPROB(
-                            log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] + 
-                            beta[w[u-1][t-1][s-1]-1]) -
-                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
-                            ); 
+                    if (roles[*fit-1][s-1] != 0) {
+                        prod += BOUNDPROB(
+                                log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] + 
+                                beta[w[u-1][t-1][s-1]-1]) -
+                                log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
+                                ); 
+                    }
                 }
                 post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha[*fit-1]));
             }
@@ -126,9 +136,11 @@ void Sampler_t::resample_frames(void) {
 
             //update new values
             for (unsigned int s=1; s<=S; ++s) {
-                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
-                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
-                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                if (w[u-1][t-1][s-1] != 0) {
+                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
+                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
+                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                }
             }
             post_phi[u-1][F]++;
             post_phi[u-1][frames[u-1][t-1]-1]++;
@@ -147,9 +159,11 @@ void Sampler_t::resample_frames_inf(void) {
             //remove old values
             if (frames[u-1][t-1] > 0) { //already sampled?
                 for (unsigned int s = 1; s <= S; ++s) {
-                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
-                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
-                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+                    if(w[u-1][t-1][s-1] != 0) {
+                        post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
+                        post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
+                        fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
+                    }
 
                 }
                 post_phi[u-1][F]--;
@@ -160,14 +174,20 @@ void Sampler_t::resample_frames_inf(void) {
             //compute frame distribution
             for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit !=used_frames.end(); 
                     ++fit) {
+
+                //skip frames that don't satisfy given pattern
+                if (emptyFrames && !checkPattern(roles[*fit-1], w[u-1][t-1])) continue;
+
                 //probability of used frames
                 double prod = 0;
                 for (unsigned int s = 1; s <= S; ++s) {
-                    prod += BOUNDPROB(
-                            log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] +
-                            beta[w[u-1][t-1][s-1]-1]) -
-                            log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
-                            );
+                    if (w[u-1][t-1][s-1] !=0 ) {
+                        prod += BOUNDPROB(
+                                log(post_theta[roles[*fit-1][s-1]-1][w[u-1][t-1][s-1]-1] +
+                                beta[w[u-1][t-1][s-1]-1]) -
+                                log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
+                                );
+                    }
                 }
                 post_frames[*fit] = prod + BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha0*tau[*fit]));
             }
@@ -189,12 +209,14 @@ void Sampler_t::resample_frames_inf(void) {
             if (frames[u-1][t-1] != newFrame && frames[u-1][t-1] != 0 && fc_f[frames[u-1][t-1]-1] == 0) {
                 frameSet.remove(frameSet.makeKey(roles[frames[u-1][t-1]-1]));
                 for (unsigned int s=1; s<=S; ++s) {
-                    post_omega[roles[frames[u-1][t-1]-1][s-1]-1]--;
-                    post_omega[R]--;
-                    if (post_omega[roles[frames[u-1][t-1]-1][s-1]-1] == 0 && infinite_R) {
-                        unused_roles.insert(roles[frames[u-1][t-1]-1][s-1]);
-                        used_roles.erase(roles[frames[u-1][t-1]-1][s-1]);
-                        gamma.erase(roles[frames[u-1][t-1]-1][s-1]);
+                    if(w[u-1][t-1][s-1] != 0) {
+                        post_omega[roles[frames[u-1][t-1]-1][s-1]-1]--;
+                        post_omega[R]--;
+                        if (post_omega[roles[frames[u-1][t-1]-1][s-1]-1] == 0 && infinite_R) {
+                            unused_roles.insert(roles[frames[u-1][t-1]-1][s-1]);
+                            used_roles.erase(roles[frames[u-1][t-1]-1][s-1]);
+                            gamma.erase(roles[frames[u-1][t-1]-1][s-1]);
+                        }
                     }
                 }
                 unused_frames.insert(frames[u-1][t-1]);
@@ -218,19 +240,23 @@ void Sampler_t::resample_frames_inf(void) {
                 
                 //remove possibly new roles of the unused new frame
                 for (unsigned int s=1; s<=S; ++s) {
-                    if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0) {
-                        used_roles.erase(frame[s-1]);
-                        unused_roles.insert(frame[s-1]);
-                        gamma.erase(frame[s-1]);
+                    if(w[u-1][t-1][s-1] != 0) {
+                        if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0) {
+                            used_roles.erase(frame[s-1]);
+                            unused_roles.insert(frame[s-1]);
+                            gamma.erase(frame[s-1]);
+                        }
                     }
                 }
             }
             
             //update new values
             for (unsigned int s=1; s<=S; ++s) {
-                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
-                post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
-                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                if(w[u-1][t-1][s-1] != 0) {
+                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
+                    post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
+                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                }
             }
             post_phi[u-1][F]++;
             post_phi[u-1][frames[u-1][t-1]-1]++;
@@ -243,21 +269,53 @@ void Sampler_t::resample_frames_inf(void) {
 }
 
 void Sampler_t::resample_roles(void) {
+    
       for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit!=used_frames.end(); ++fit) {
+        //select frame pattern
+        vector<unsigned int> pattern;
+        if( fc_f[*fit-1] == 0) {
+            //sample pattern 
+            pattern = dist->sampleMultinomial(framePatterns, positions);
+        } else {
+            pattern = roles[*fit-1];
+        }
+
         for (unsigned int s = 1; s <= S; ++s) {
-            map<unsigned short int, double> post_roles;
-
-            post_theta[roles[*fit-1][s-1]-1][V] -= fc_f[*fit-1];
-            for(unsigned int v=1; v<=V; ++v) {
-                post_theta[roles[*fit-1][s-1]-1][v-1] -= fc_fsw[*fit-1][s-1][v-1];
-            }
-
-            post_omega[roles[*fit-1][s-1]-1]--;
-            post_omega[R]--;
-           
             FrameKey_t oldFrame; 
             oldFrame = frameSet.makeKey(roles[*fit-1]);
 
+            //empty slots
+            if (pattern[s-1] == 0) {
+                if (roles[*fit-1][s-1] != 0) {
+                    FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, 0);
+                    bool inside = frameSet.inside(newFrame);
+                    if (!inside) {
+                        post_omega[roles[*fit-1][s-1]-1]--;
+                        post_omega[R]--;
+                        roles[*fit-1][s-1] = 0;
+                        frameSet.remove(oldFrame);
+                        frameSet.insert(newFrame);
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+
+
+            map<unsigned short int, double> post_roles;
+
+            if (roles[*fit-1][s-1] != 0) {
+                post_theta[roles[*fit-1][s-1]-1][V] -= fc_f[*fit-1];
+                for(unsigned int v=1; v<=V; ++v) {
+                    post_theta[roles[*fit-1][s-1]-1][v-1] -= fc_fsw[*fit-1][s-1][v-1];
+                }
+
+                post_omega[roles[*fit-1][s-1]-1]--;
+                post_omega[R]--;
+            }
+           
+            unsigned int possibilities = 0;
             for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit != used_roles.end();
                     ++rit) {
                 FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, *rit);
@@ -272,21 +330,22 @@ void Sampler_t::resample_roles(void) {
                             );
                     }
                     post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma[*rit]));
+                    possibilities++;
                 }
             }
 
             //sample role
-            dist->normalizeLogMult(post_roles);
-            roles[*fit-1][s-1] = dist->sampleMultinomial(post_roles);
-        
-            frameSet.remove(oldFrame);
-            frameSet.insert(frameSet.makeKey(roles[*fit-1]));
-
-            post_omega[roles[*fit-1][s-1]-1]++;
-            post_omega[R]++;
-            post_theta[roles[*fit-1][s-1]-1][V] += fc_f[*fit-1];
-            for(unsigned int v=1; v<=V; ++v) {
-                post_theta[roles[*fit-1][s-1]-1][v-1] += fc_fsw[*fit-1][s-1][v-1];
+            if (possibilities > 0) {
+                dist->normalizeLogMult(post_roles);
+                roles[*fit-1][s-1] = dist->sampleMultinomial(post_roles);
+                frameSet.remove(oldFrame);
+                frameSet.insert(frameSet.makeKey(roles[*fit-1]));
+                post_omega[roles[*fit-1][s-1]-1]++;
+                post_omega[R]++;
+                post_theta[roles[*fit-1][s-1]-1][V] += fc_f[*fit-1];
+                for(unsigned int v=1; v<=V; ++v) {
+                    post_theta[roles[*fit-1][s-1]-1][v-1] += fc_fsw[*fit-1][s-1][v-1];
+                }
             }
         }
     }
@@ -296,6 +355,10 @@ void Sampler_t::resample_roles_inf(void) {
 
     for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit!=used_frames.end(); ++fit) {
         for (unsigned int s = 1; s <= S; ++s) {
+
+            //empty slot
+            if (roles[*fit-1][s-1] == 0) continue;
+
             map<unsigned short int, double> post_roles;
 
             post_theta[roles[*fit-1][s-1]-1][V] -= fc_f[*fit-1];
@@ -570,7 +633,10 @@ unsigned int Sampler_t::createNewRole(void) {
 
 bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos) {
     for (unsigned int s=1; s<=S; ++s) {
-
+        if (pos[s-1]==0) {
+            frame[s-1] = 0;
+            continue;
+        }
         map<unsigned short int, double> post_roles;
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit!=used_roles.end();
                 ++rit) {
@@ -622,14 +688,23 @@ unsigned int Sampler_t::createNewFrame(vector<unsigned int> &frame) {
 
     for (unsigned int s = 1; s <= S; ++s ) {
         roles[frameId-1][s-1] = frame[s-1];
-        post_omega[roles[frameId-1][s-1]-1]++;
-        post_omega[R]++;
+        if (frame[s-1] != 0) {
+            post_omega[roles[frameId-1][s-1]-1]++;
+            post_omega[R]++;
+        }
     }
 
     FrameKey_t fk = frameSet.makeKey(roles[frameId-1]);
     frameSet.insert(fk);
     
     return frameId;
+}
+
+
+bool Sampler_t::checkPattern(vector<unsigned int> &u, vector<unsigned int> &v) {
+    if (u.size() != v.size()) return false;
+    for (unsigned int i=0; i<u.size(); ++i) if ((bool) u[i] != (bool) v[i]) return false;
+    return true;
 }
 
 
@@ -643,10 +718,12 @@ double Sampler_t::perplexity(void) {
            loglik += BOUNDPROB(log(post_phi[u-1][f-1]) -
                      log(post_phi[u-1][F]));
            for (unsigned int s=1; s<=S; ++s) {
-                unsigned int r = roles[f-1][s-1];
-                words++;
-                loglik += BOUNDPROB(log(post_theta[r-1][w[u-1][t-1][s-1]-1]) -
-                          log(post_theta[r-1][V]));
+                if (roles[f-1][s-1] > 0) {
+                    unsigned int r = roles[f-1][s-1];
+                    words++;
+                    loglik += BOUNDPROB(log(post_theta[r-1][w[u-1][t-1][s-1]-1]) -
+                              log(post_theta[r-1][V]));
+                }
             }
         }
     }
@@ -702,7 +779,9 @@ void Sampler_t::pack_FR(void) {
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
             fc_f[frames[u-1][t-1]-1]++;
             for (unsigned int s=1; s<=S; ++s) {
-                fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                if (w[u-1][t-1][s-1] != 0) {
+                    fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
+                }
             }
         }
     }

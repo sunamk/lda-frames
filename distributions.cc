@@ -89,6 +89,16 @@ unsigned int Distributions_t::sampleMultinomial(vector<double> &v, double sum, u
     return first;
 }
 
+vector<unsigned int> Distributions_t::sampleMultinomial(map<vector<unsigned int>, unsigned int> &v, unsigned int sum) {
+    double s = randf();
+    for (map<vector<unsigned int>, unsigned int>::const_iterator it=v.begin();
+                it != v.end(); ++it) {
+        s-= (double) it->second / sum;
+        if (s<0) return it->first;
+    }
+    return v.begin()->first;
+}
+
 unsigned int Distributions_t::sampleBernoulli(double p) {
     return gsl_ran_bernoulli(RANDOM_NUMBER, p);
 }
