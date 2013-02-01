@@ -293,8 +293,8 @@ if __name__ == "__main__":
         corenlp += "/"    
 
     jars = ":".join([
-        corenlp + "stanford-corenlp-2012-01-08.jar",
-        corenlp + "stanford-corenlp-2011-12-27-models.jar",
+        corenlp + "stanford-corenlp-1.3.4.jar",
+        corenlp + "stanford-corenlp-1.3.4-models.jar",
         corenlp + "xom.jar",
         corenlp + "joda-time.jar"
     ])
