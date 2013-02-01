@@ -20,9 +20,11 @@ bool Sampler_t::loadData(string inputFileName) {
         cout << "Cannot open file " << inputFileName << ".\n";
         return false;
     }
-
+    
     string line;
     unsigned long int progress = 0;
+    emptyFrames = false;
+    positions = 0;
     while (getline(ifs, line)) {
         progress++;
         boost::char_separator<char> sep("\t");
@@ -35,14 +37,18 @@ bool Sampler_t::loadData(string inputFileName) {
             boost::char_separator<char> sep(" ");
             tokenizer slots(*tok_iter, sep);
 
-            vector<unsigned int> s;
+            vector<unsigned int> s, framePattern;
             for (tokenizer::iterator slot_iter = slots.begin();
                 slot_iter != slots.end(); ++slot_iter) {
                 const unsigned int w = atoi(slot_iter->c_str());
                 if (w == 0) {
-                    cout << "Invalid input data: " << *slot_iter << endl;
-                    ifs.close();
-                    return false;
+                    framePattern.push_back(0);
+                    emptyFrames = true;
+                    //cout << "Invalid input data: " << *slot_iter << endl;
+                    //ifs.close();
+                    ///return false;
+                } else {
+                    framePattern.push_back(1);
                 }
                 if (V < w) V = w;
                 s.push_back(w);
@@ -59,6 +65,14 @@ bool Sampler_t::loadData(string inputFileName) {
                 }
             }
             unit.push_back(s);
+            map<vector<unsigned int>, unsigned int>::const_iterator it;
+            it = framePatterns.find(framePattern);
+            if(it == framePatterns.end()) {
+                framePatterns[framePattern] = 1;
+            } else {
+                framePatterns[framePattern]++;
+            }
+            positions++;
         }
         w.push_back(unit);
     }
@@ -66,6 +80,16 @@ bool Sampler_t::loadData(string inputFileName) {
 
     ifs.close();
 
+    cout << "Frame patterns:" << endl;
+    for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
+            it != framePatterns.end(); ++it) {
+        cout << "\t[ ";
+        for (unsigned int s=1; s<=S; ++s) {
+            cout << it->first[s-1] << " ";
+        }
+        cout << "]: " << it->second << " (" << round(100*((double)it->second / positions)) 
+             << " %)" << endl;
+    }
 
     if (F == 0) {
         cout << "F = automatic" << endl;
@@ -78,7 +102,7 @@ bool Sampler_t::loadData(string inputFileName) {
     }
     if (R == 0) {
         infinite_R = true;
-        //R = floor(exp(log(F)/S)) + 1; //minimum number of roles
+        //this is untrue in the case of multiple frame patterns
         R = ceil(exp(log(F)/S)); //minimum number of roles
         cout << "R = automatic (min. " << R << ")" << endl;
     } else {
@@ -89,8 +113,14 @@ bool Sampler_t::loadData(string inputFileName) {
 
     
     if (F > pow(R, S)) {
+        //this is untrue in the case of multiple frame patterns
         cout << "Number of frames (F) must be lower than or equal to the number of all " <<
                 "combinations of possible semantic roles (R^S)." << endl;
+        return false;
+    }
+    if (F < framePatterns.size() && !infinite_F) {
+        cout << "Number of frames (F) must be higher or equal to the number of different " <<
+                "frame patterns in the input data." << endl;
         return false;
     }
     
@@ -358,7 +388,9 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
 
             fc_f[frame-1]++;
             for (unsigned int s=1; s<=S; ++s) {
-                fc_fsw[frame-1][s-1][w[u-1][t-1][s-1]-1]++;
+                if (w[u-1][t-1][s-1] != 0) {
+                    fc_fsw[frame-1][s-1][w[u-1][t-1][s-1]-1]++;
+                }
             }
         }
         if (t != w[u-1].size()) {
@@ -374,6 +406,12 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
         ffile.close();
         rfile.close();
         return false;
+    }
+
+    if (!infinite_F) { //ensure that all frames are in the set
+        for (unsigned int f=1; f<=F; ++f) {
+            used_frames.insert(f);
+        }
     }
 
     
@@ -401,7 +439,7 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
                 return false;
             }
             unsigned int role = atoi(tok_iter->c_str());
-            if (role <= 0 || role > R) {
+            if (role > R) {
                 cout << "Wrong role number (" << *tok_iter << ")." << endl;
                 ffile.close();
                 rfile.close();
@@ -409,7 +447,7 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
             }
             //recover data
             roles[f-1][s-1] = role;
-            used_roles.insert(role);
+            if (role > 0) used_roles.insert(role);
         }
         if (s != S) {
             cout << "Wrong number of slots (line #" << f <<")." << endl;
@@ -419,6 +457,13 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
         }
 
     }
+    
+    if (!infinite_R) { //ensure that all roles are in the set
+        for (unsigned int r=1; r<=R; ++r) {
+            used_roles.insert(r);
+        }
+    }
+
     //recover data
     FrameKey_t fk = frameSet.makeKey(roles[f-1]);
     frameSet.insert(fk);
@@ -449,7 +494,6 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
 
     ffile.close();
     rfile.close();
-
     return true;
 }
 
