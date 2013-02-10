@@ -67,7 +67,12 @@ if __name__ == "__main__":
         roles = [ldaf.getRealDist(s, realizations) for s in frame]
         for i in range(realizations):
             for j in range(len(frame)):
-                sys.stdout.write(str(roles[j][i]) + "".join([" " for k in range(50-len(str(roles[j][i]))) ]))
+                item = None
+                try:
+                    item = roles[j][i]
+                except IndexError:
+                    item = ""
+                sys.stdout.write(str(item) + "".join([" " for k in range(50-len(str(item))) ]))
             print
         print
     

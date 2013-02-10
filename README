@@ -1,0 +1,27 @@
+#
+# Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
+# Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
+#
+
+=Installation=
+
+=Input Data=
+
+=Data preprocessing=
+
+
+=Example=
+
+$ utils/randomData.py data/test/test.rel 0
+
+$ preprocessing/generate_samplerinput.py data/test/test.rel data/test/
+
+$ sampler/ldaframes-sampler --seed=1 -I 200 data/test/relations.dat data/test/
+
+$ utils/evaluateRandom.py data/test/test.rel.chck data/test/
+
+$ preprocessing/generate_distributions.py data/test/
+
+$ libldaf/showFrames.py -r 5 data/test/ eat
+
+
