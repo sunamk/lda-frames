@@ -8,15 +8,16 @@
 #include <iostream>
 
 
-FrameKey_t Frames_t::makeKey(unsigned int *f) {
-    FrameKey_t k;
-    for (unsigned int i = 0; i < S; ++i) {
-        k.push_back(f[i]);
-    }
+void Frames_t::setS(unsigned int slots) {
+    S = slots;
+}
+
+FrameKey_t Frames_t::makeKey(vector<unsigned int> &f) {
+    FrameKey_t k = f;
     return k;
 }
 
-FrameKey_t Frames_t::makeKey(unsigned int *f, unsigned int s, unsigned int r) {
+FrameKey_t Frames_t::makeKey(vector<unsigned int> &f, unsigned int s, unsigned int r) {
     FrameKey_t k;
     for (unsigned int i = 0; i < S; ++i) {
         if (i == s-1) {
@@ -47,4 +48,14 @@ void Frames_t::printKey(FrameKey_t k) {
         std::cout << *it << " ";
     }
     std::cout << std::endl;
+}
+
+void Frames_t::printAll(void) {
+    for(set<FrameKey_t>::const_iterator it = frameSet.begin(); it!=frameSet.end(); ++it) {
+        printKey(*it);
+    }
+}
+
+void Frames_t::clear(void) {
+    frameSet.clear();
 }
