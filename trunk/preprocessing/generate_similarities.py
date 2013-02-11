@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+# Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
 # Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
 #
 
@@ -65,6 +65,7 @@ if __name__ == "__main__":
                     similarPredicates.append((pred2, 1-distance))
             dist_database[pred1] = sorted(similarPredicates, key=lambda k: -k[1])
         dist_database.close()
+        print "Finished."
                     
 
     except anydbm.error, msg:

@@ -58,12 +58,16 @@ class Evaluator:
     def computeScore(self, original, frames, roles, mapping):
         all_freq = 0
         correct_freq = 0
-        for orig, fr in izip(original, frames):
-            for frame, frame_id in izip(orig, fr):
-                for role, role_id in izip(frame, roles[frame_id-1]):
+        for pred, (orig, fr) in enumerate(izip(original, frames)):
+            for pos, (frame, frame_id) in enumerate(izip(orig, fr)):
+                for slot, (role, role_id) in  enumerate(izip(frame, roles[frame_id-1])):
                     all_freq += 1
                     if role == mapping[role_id]:
                         correct_freq += 1
+                    else:
+                        sys.stderr.write("Incorrectly classified %d as %s at "
+                                          "predicate %d, position %d, slot %d.\n" % (
+                            role_id, role, pred+1, pos+1, slot+1))
         sys.stderr.write("Correctly assigned sematic roles: %d/%d.\n" % (correct_freq, all_freq))
         return float(correct_freq)/all_freq        
 
@@ -75,6 +79,7 @@ if __name__ == "__main__":
 
 USAGE: ./evaluateRandom.py original_filename path
 """)
+        sys.exit(1)
     orig_file_name = sys.argv[1]
     path = sys.argv[2]
     if not path.endswith("/"): path += "/"
