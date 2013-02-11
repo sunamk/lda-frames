@@ -12,7 +12,7 @@
 
 =Example=
 
-$ utils/randomData.py data/test/test.rel 0
+#$ utils/randomData.py data/test/test.rel 0
 
 $ preprocessing/generate_samplerinput.py data/test/test.rel data/test/
 
@@ -22,6 +22,6 @@ $ utils/evaluateRandom.py data/test/test.rel.chck data/test/
 
 $ preprocessing/generate_distributions.py data/test/
 
-$ libldaf/showFrames.py -r 5 data/test/ eat
+$ libldaf/showFrames.py -r 4 data/test/ eat
 
 
