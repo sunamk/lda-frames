@@ -5,6 +5,7 @@
  */
 
 #include <fstream>
+#include <iostream>
 #include <boost/tokenizer.hpp>
 #include <cmath>
 #include "sampler.h"
