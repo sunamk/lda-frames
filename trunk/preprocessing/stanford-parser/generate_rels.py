@@ -48,10 +48,11 @@ logger.setLevel(logging.DEBUG)
 class Worker:
     def __init__(self, args):
         self.args = args
-        self.server = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            preexec_fn = self.preexec_function)
+        self.server = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, preexec_fn = self.preexec_function)
         self.stdin = self.server.stdin
         self.stdout = self.server.stdout
+        self.stderr = self.server.stderr
         DBG("Worker initialized.")
 
     def preexec_function(self):
@@ -66,7 +67,7 @@ class Worker:
             WARN("Error while writing the sentence to CoreNLP.")
             return False
         state = 0
-        result = {"deps":[], "lemmas":[]}
+        result = {"deps":[], "lemmas":[], "tags":[]}
 
         DBG("Worker wrote sentence")
 
@@ -91,12 +92,17 @@ class Worker:
                     av = re.split("=| ", s)
                     word = av[1] 
                     lemma = ""
+                    tag = ""
                     attributes = {}
                     for a,v in zip(*[av[2:][x::2] for x in (0, 1)]):
                         if a == "Lemma":
                             lemma = v
-                            break   
+                            #break   
+                        if a == "PartOfSpeech":
+                            tag = v
+                            #break   
                     result['lemmas'].append(lemma)
+                    result['tags'].append(tag)
             if line.startswith("(ROOT"):
                 state = 3
                 continue
