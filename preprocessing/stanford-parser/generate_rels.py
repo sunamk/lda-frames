@@ -293,7 +293,7 @@ if __name__ == "__main__":
     cores = int(args[0])
     input_file = args[1]
 
-    if output_file == "": output_file = input_file + ".rel"
+    if output_file == "": output_file = input_file + ".prs"
 
     if not corenlp.endswith("/"):
         corenlp += "/"    
