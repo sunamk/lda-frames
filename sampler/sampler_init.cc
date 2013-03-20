@@ -59,6 +59,7 @@ void Sampler_t::initialize_roles(void) {
         for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
                 it != framePatterns.end(); ++it) {
             boundary += (((double) it->second) / positions)*(F - framePatterns.size()) + 1;
+
             while (f <= round(boundary)) {
                 do {
                    for (unsigned int s=1; s<=S; ++s) {
