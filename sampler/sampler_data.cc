@@ -117,7 +117,7 @@ bool Sampler_t::loadData(string inputFileName) {
     }
 
     
-    if (F > maxFrames) {
+    if (F > maxFrames && !infinite_F) {
         cout << "Number of frames (F) must be lower than or equal to the number of all " <<
                 "possible combinations of semantic roles (" << maxFrames << ")." << 
                 endl;
@@ -138,7 +138,6 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
-
 
     return true;
 }
