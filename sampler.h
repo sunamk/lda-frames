@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -11,6 +11,7 @@
 #include <set>
 #include <map>
 #include <string>
+#include <omp.h>
 #include "distributions.h"
 #include "frames.h"
 
@@ -26,12 +27,13 @@ public:
               float _delta,
               long int _seed,
               bool _reestimate_F,
-              bool _reestimate_R): F(_F), R(_R), S(0), U(0), V(0),
+              bool _reestimate_R,
+              unsigned int _cores): F(_F), R(_R), S(0), U(0), V(0),
                             alpha0(_alpha), beta0(_beta), gamma0(_gamma),
                             delta(_delta),
                             seed(_seed),
                             reestimate_F(_reestimate_F), reestimate_R(_reestimate_R),
-                            infinite_F(false), infinite_R(false),
+                            cores(_cores), infinite_F(false), infinite_R(false),
                             startIter(1), initialized(false)
                             {};
 
@@ -89,6 +91,7 @@ private:
 
     bool reestimate_F;
     bool reestimate_R;
+    unsigned int cores;
     bool infinite_F;
     bool infinite_R;
 
