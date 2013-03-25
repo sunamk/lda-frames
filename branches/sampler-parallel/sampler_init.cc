@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -35,6 +35,8 @@ bool Sampler_t::initialize(bool recovery) {
     }
     gamma[0] = gamma0;
 
+    omp_set_num_threads(cores);
+
     if (!recovery) {
         cout << "Initializing variables..." << endl;
         initialize_beta();
@@ -59,6 +61,7 @@ void Sampler_t::initialize_roles(void) {
         for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
                 it != framePatterns.end(); ++it) {
             boundary += (((double) it->second) / positions)*(F - framePatterns.size()) + 1;
+
             while (f <= round(boundary)) {
                 do {
                    for (unsigned int s=1; s<=S; ++s) {

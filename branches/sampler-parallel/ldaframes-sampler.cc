@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
     bool no_hypers = false;
     bool no_perplexity = false;
     bool remove_old_samples = false;
+    unsigned int cores = 1;
     
     long int seed = 0;
     
@@ -59,8 +60,8 @@ int main(int argc, char **argv) {
         ("beta", po::value<float>(), "Beta parameter.")
         ("gamma", po::value<float>(), "Gamma parameter.")
         ("delta", po::value<float>(), "Delta parameter.")
-        ("seed", po::value<long int>(), 
-        "Random number generator seed (0 = current time).")
+        ("seed", po::value<long int>(), "Random number generator seed (0 = current time).")
+        ("cores,C", po::value<unsigned int>(), "number of cores (default is 1).")
         ("reestimate_F","Reestimate number of frames automatically.")
         ("reestimate_R","Reestimate number of roles automatically.")
         ("no_hypers", "Do not estimate hyperparameters.")
@@ -169,9 +170,13 @@ int main(int argc, char **argv) {
     if (vm.count("seed")) {
         seed = vm["seed"].as<long int>();
     }
+    
+    if (vm.count("cores")) {
+        cores = vm["cores"].as<unsigned int>();
+    }
 
 
-    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed, reestimate_F, reestimate_R);
+    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed, reestimate_F, reestimate_R, cores);
 
     if (!vm.count("recovery")) {
         cout << "Number of iterations is " << iters << "." << endl;

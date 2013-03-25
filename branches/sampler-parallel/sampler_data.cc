@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -82,16 +82,20 @@ bool Sampler_t::loadData(string inputFileName) {
     ifs.close();
 
     cout << "Frame patterns:" << endl;
+    unsigned int maxFrames = 0;
     for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
             it != framePatterns.end(); ++it) {
+        unsigned int usedSlots = 0;
         cout << "\t[ ";
         for (unsigned int s=1; s<=S; ++s) {
             cout << it->first[s-1] << " ";
+            if (it->first[s-1] != 0) usedSlots++;
         }
         cout << "]: " << it->second << " (" << round(100*((double)it->second / positions)) 
              << " %)" << endl;
+        unsigned int maxFr = floor(pow(R, usedSlots)/((double)it->second / positions));
+        if (maxFrames==0 || maxFrames > maxFr) maxFrames = maxFr;
     }
-
     if (F == 0) {
         cout << "F = automatic" << endl;
         infinite_F = true;
@@ -113,10 +117,10 @@ bool Sampler_t::loadData(string inputFileName) {
     }
 
     
-    if (F > pow(R, S)) {
-        //this is untrue in the case of multiple frame patterns
+    if (F > maxFrames && !infinite_F) {
         cout << "Number of frames (F) must be lower than or equal to the number of all " <<
-                "combinations of possible semantic roles (R^S)." << endl;
+                "possible combinations of semantic roles (" << maxFrames << ")." << 
+                endl;
         return false;
     }
     if (F < framePatterns.size() && !infinite_F) {
@@ -134,6 +138,12 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
+    if (cores < 1 || cores > (unsigned int) omp_get_max_threads()) {
+        cout << "Wrong number of cores (" << cores << "). It must be between 1 and "<<
+                omp_get_max_threads() << "." << endl;
+        return false;
+    }
+    cout << "cores = " << cores << endl;
 
 
     return true;

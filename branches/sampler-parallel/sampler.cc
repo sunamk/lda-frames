@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -93,6 +93,7 @@ void Sampler_t::resample_tau(void) {
 
 
 void Sampler_t::resample_frames(void) {
+    #pragma omp parallel for
     for (int u = 1; u <= (signed int) U; ++u) {
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
 
@@ -101,13 +102,17 @@ void Sampler_t::resample_frames(void) {
             //remove old values
             for (unsigned int s = 1; s <= S; ++s) {
                 if (w[u-1][t-1][s-1] != 0) {
+                    #pragma omp atomic
                     post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]--;
+                    #pragma omp atomic
                     post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]--;
+                    #pragma omp atomic
                     fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]--;
                 }
             }
             post_phi[u-1][F]--;
             post_phi[u-1][frames[u-1][t-1]-1]--;
+            #pragma omp atomic
             fc_f[frames[u-1][t-1]-1]--;
 
             //compute frame distribution
@@ -137,13 +142,17 @@ void Sampler_t::resample_frames(void) {
             //update new values
             for (unsigned int s=1; s<=S; ++s) {
                 if (w[u-1][t-1][s-1] != 0) {
+                    #pragma omp atomic
                     post_theta[roles[frames[u-1][t-1]-1][s-1]-1][V]++;
+                    #pragma omp atomic
                     post_theta[roles[frames[u-1][t-1]-1][s-1]-1][w[u-1][t-1][s-1]-1]++;
+                    #pragma omp atomic
                     fc_fsw[frames[u-1][t-1]-1][s-1][w[u-1][t-1][s-1]-1]++;
                 }
             }
             post_phi[u-1][F]++;
             post_phi[u-1][frames[u-1][t-1]-1]++;
+            #pragma omp atomic
             fc_f[frames[u-1][t-1]-1]++;
         }
     }
@@ -269,8 +278,12 @@ void Sampler_t::resample_frames_inf(void) {
 }
 
 void Sampler_t::resample_roles(void) {
-    
-      for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit!=used_frames.end(); ++fit) {
+   
+    #pragma omp parallel for
+    for (unsigned int f=1; f<=used_frames.size(); ++f) {
+        set<unsigned int>::const_iterator fit = used_frames.begin();
+        advance(fit, f-1);
+    //for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit!=used_frames.end(); ++fit) {
         //select frame pattern
         vector<unsigned int> pattern;
         if( fc_f[*fit-1] == 0) {
@@ -287,16 +300,19 @@ void Sampler_t::resample_roles(void) {
             //empty slots
             if (pattern[s-1] == 0) {
                 if (roles[*fit-1][s-1] != 0) {
-                    FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, 0);
-                    bool inside = frameSet.inside(newFrame);
-                    if (!inside) {
-                        post_omega[roles[*fit-1][s-1]-1]--;
-                        post_omega[R]--;
-                        roles[*fit-1][s-1] = 0;
-                        frameSet.remove(oldFrame);
-                        frameSet.insert(newFrame);
-                        continue;
+                    #pragma omp critical
+                    {
+                        FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, 0);
+                        bool inside = frameSet.inside(newFrame);
+                        if (!inside) {
+                            post_omega[roles[*fit-1][s-1]-1]--;
+                            post_omega[R]--;
+                            frameSet.remove(oldFrame);
+                            frameSet.insert(newFrame);
+                        }
                     }
+                        roles[*fit-1][s-1] = 0;
+                        continue;
                 } else {
                     continue;
                 }
@@ -306,20 +322,26 @@ void Sampler_t::resample_roles(void) {
             map<unsigned short int, double> post_roles;
 
             if (roles[*fit-1][s-1] != 0) {
-                post_theta[roles[*fit-1][s-1]-1][V] -= fc_f[*fit-1];
-                for(unsigned int v=1; v<=V; ++v) {
-                    post_theta[roles[*fit-1][s-1]-1][v-1] -= fc_fsw[*fit-1][s-1][v-1];
+                #pragma omp critical
+                {
+                    post_theta[roles[*fit-1][s-1]-1][V] -= fc_f[*fit-1];
+                    for(unsigned int v=1; v<=V; ++v) {
+                        post_theta[roles[*fit-1][s-1]-1][v-1] -= fc_fsw[*fit-1][s-1][v-1];
+                    }
+                    post_omega[roles[*fit-1][s-1]-1]--;
+                    post_omega[R]--;
                 }
-
-                post_omega[roles[*fit-1][s-1]-1]--;
-                post_omega[R]--;
             }
            
             unsigned int possibilities = 0;
             for (set<unsigned int>::const_iterator rit = used_roles.begin(); rit != used_roles.end();
                     ++rit) {
                 FrameKey_t newFrame = frameSet.makeKey(roles[*fit-1], s, *rit);
-                bool inside = frameSet.inside(newFrame);
+                bool inside;
+                #pragma omp critical
+                {
+                    inside = frameSet.inside(newFrame);
+                }
                 if (newFrame == oldFrame || !inside) {
                     double prod = 0;
                     for (unsigned int v = 1; v<=V; ++v) {
@@ -329,6 +351,7 @@ void Sampler_t::resample_roles(void) {
                             log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
+                    
                     post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma[*rit]));
                     possibilities++;
                 }
@@ -338,13 +361,16 @@ void Sampler_t::resample_roles(void) {
             if (possibilities > 0) {
                 dist->normalizeLogMult(post_roles);
                 roles[*fit-1][s-1] = dist->sampleMultinomial(post_roles);
-                frameSet.remove(oldFrame);
-                frameSet.insert(frameSet.makeKey(roles[*fit-1]));
-                post_omega[roles[*fit-1][s-1]-1]++;
-                post_omega[R]++;
-                post_theta[roles[*fit-1][s-1]-1][V] += fc_f[*fit-1];
-                for(unsigned int v=1; v<=V; ++v) {
-                    post_theta[roles[*fit-1][s-1]-1][v-1] += fc_fsw[*fit-1][s-1][v-1];
+                #pragma omp critical
+                {
+                    frameSet.remove(oldFrame);
+                    frameSet.insert(frameSet.makeKey(roles[*fit-1]));
+                    post_omega[roles[*fit-1][s-1]-1]++;
+                    post_omega[R]++;
+                    post_theta[roles[*fit-1][s-1]-1][V] += fc_f[*fit-1];
+                    for(unsigned int v=1; v<=V; ++v) {
+                        post_theta[roles[*fit-1][s-1]-1][v-1] += fc_fsw[*fit-1][s-1][v-1];
+                    }
                 }
             }
         }
@@ -523,6 +549,7 @@ void Sampler_t::sample(void) {
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int burn_in, bool allSamples,
         bool no_hypers, bool no_perplexity, bool rm) {
+
 
     if (outputDir.at(outputDir.size()-1) != '/') outputDir += "/";
     int status = mkdir(outputDir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
