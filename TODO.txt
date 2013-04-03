@@ -1,4 +1,2 @@
 * estimate gamma
 * estimate alpha for the finite version
-* segmentation fault for ldaframes-sampler -P -R 4 -I 100 ./ldadata-test ./o
-* parallelization
