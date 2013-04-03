@@ -250,7 +250,7 @@ void Sampler_t::resample_frames_inf(void) {
                 //remove possibly new roles of the unused new frame
                 for (unsigned int s=1; s<=S; ++s) {
                     if(w[u-1][t-1][s-1] != 0) {
-                        if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0) {
+                        if (frame[s-1] != 0 && post_omega[frame[s-1]-1] == 0 && infinite_R) {
                             used_roles.erase(frame[s-1]);
                             unused_roles.insert(frame[s-1]);
                             gamma.erase(frame[s-1]);
@@ -673,7 +673,9 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
                 log(gamma[*rit] + post_omega[*rit-1])
                 );
         }
-        post_roles[R + 1] = log(gamma[0]) - log(V);
+        if (infinite_R) {
+            post_roles[R + 1] = log(gamma[0]) - log(V);
+        }
 
         //sample role id
         dist->normalizeLogMult(post_roles);
