@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
         ("gamma", po::value<float>(), "Gamma parameter.")
         ("delta", po::value<float>(), "Delta parameter.")
         ("seed", po::value<long int>(), "Random number generator seed (0 = current time).")
-        ("cores,C", po::value<unsigned int>(), "number of cores (default is 1).")
+        ("cores,C", po::value<unsigned int>(), "number of cores (default is 1, works only when fixed F and R are given).")
         ("reestimate_F","Reestimate number of frames automatically.")
         ("reestimate_R","Reestimate number of roles automatically.")
         ("no_hypers", "Do not estimate hyperparameters.")
