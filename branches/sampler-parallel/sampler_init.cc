@@ -35,7 +35,9 @@ bool Sampler_t::initialize(bool recovery) {
     }
     gamma[0] = gamma0;
 
-    omp_set_num_threads(cores);
+    if (cores != 0) {
+        omp_set_num_threads(cores);
+    }
 
     if (!recovery) {
         cout << "Initializing variables..." << endl;

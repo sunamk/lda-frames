@@ -138,8 +138,8 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
-    if (cores < 1 || cores > (unsigned int) omp_get_max_threads()) {
-        cout << "Wrong number of cores (" << cores << "). It must be between 1 and "<<
+    if (cores < 0 || cores > (unsigned int) omp_get_max_threads()) {
+        cout << "Wrong number of cores (" << cores << "). It must be between 0 and "<<
                 omp_get_max_threads() << "." << endl;
         return false;
     }
