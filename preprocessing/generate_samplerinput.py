@@ -13,12 +13,12 @@ USAGE: ./generate_samplerinput.py input.rel path
     input.rel             Input file with the grammatical relation data.
     path                  Output path.
     -h, --help            Print this help.
-                          input file with suffix '.dict'.
 """
 
 import sys
 import getopt
 import cPickle
+import random
 from ldafdict import Dictionary
 
 
@@ -71,6 +71,14 @@ if __name__ == "__main__":
             sys.exit(2)
         data[pid-1].append(slots)
 
+    #shuffle lines
+    random.seed(None)
+    permutation = zip(xrange(len(data)), random.sample(xrange(len(data)), len(data)))
+    for swap in permutation:
+        tmp = data[swap[0]]
+        data[swap[0]] = data[swap[1]]
+        data[swap[1]] = tmp
+    dictionary.permutatePredicates(permutation)
     print "Writing data."
     for p in data:
         output_file.write("\t".join([" ".join(map(str, r)) for r in p]) + "\n")

@@ -10,3 +10,8 @@ should
 may
 must
 might
+\
+s
+ed
+cf.
+re
