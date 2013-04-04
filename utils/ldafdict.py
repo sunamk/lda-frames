@@ -60,3 +60,13 @@ class Dictionary:
     def getRelations(self):
         return self.relations
 
+    def permutatePredicates(self, permutation):
+        for swap in permutation:
+            tmp = self.id2p[swap[0]]
+            self.id2p[swap[0]] = self.id2p[swap[1]]
+            self.id2p[swap[1]] = tmp
+            self.p2id[self.id2p[swap[1]]] = swap[0] + 1
+            self.p2id[self.id2p[swap[0]]] = swap[1] + 1
+            
+
+
