@@ -66,6 +66,12 @@ def is_symbol(tag):
     else:
         return False
 
+def is_number(tag):
+    if tag=="NUM":
+        return True
+    else:
+        return False
+
 def is_adjective(tag):
     if tag=="JJ" or tag=="JJR" or tag=="JJS":
         return True
@@ -104,8 +110,8 @@ def verb(parseResult, desc=False):
             except IndexError:
                 continue
 
-            if  dep[0] == "nsubj" and (is_noun(tag) or is_num(tag) or \
-                    is_pronoun(tag) or is_sym(tag)):
+            if  dep[0] == "nsubj" and (is_noun(tag) or is_number(tag) or \
+                    is_pronoun(tag) or is_symbol(tag)):
                 try:
                     rels[dep[1]][0] = l2
                 except KeyError:
@@ -119,15 +125,15 @@ def verb(parseResult, desc=False):
                     rels[dep[1]] = ["-", "-", "-", "-"]
                     rels[dep[1]][0] = "CLAUSE"
 
-            elif dep[0] == "dobj" and (is_noun(tag) or is_num(tag) or \
-                    is_pronoun(tag) or is_sym(tag)):
+            elif dep[0] == "dobj" and (is_noun(tag) or is_number(tag) or \
+                    is_pronoun(tag) or is_symbol(tag)):
                 try:
                     rels[dep[1]][1] = l2
                 except KeyError:
                     rels[dep[1]] = ["-", "-", "-", "-"]
                     rels[dep[1]][1] = l2
-            elif dep[0] == "iobj" and (is_noun(tag) or is_num(tag) or \
-                    is_pronoun(tag) or is_sym(tag)):
+            elif dep[0] == "iobj" and (is_noun(tag) or is_number(tag) or \
+                    is_pronoun(tag) or is_symbol(tag)):
                 try:
                     rels[dep[1]][2] = l2
                 except KeyError:
