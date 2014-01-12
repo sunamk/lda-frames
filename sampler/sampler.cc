@@ -386,14 +386,14 @@ void Sampler_t::resample_roles_inf(void) {
                             log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
-                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma[*rit]));
+                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1])); //+ gamma[*rit]));
                 }
             }
 
             //probability of a new role
             double prod = 0;
             for (unsigned int v = 1; v<=V; ++v) {
-                prod -= fc_fsw[*fit-1][s-1][v-1]*log(V);
+                  prod -= fc_fsw[*fit-1][s-1][v-1]*log(V);
             }
             post_roles[R + 1] = prod + BOUNDPROB(log(gamma[0]));
             
