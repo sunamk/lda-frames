@@ -643,7 +643,8 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
             post_roles[*rit] = BOUNDPROB(
                 log(post_theta[*rit-1][pos[s-1]-1] + beta[pos[s-1]-1]) -
                 log(post_theta[*rit-1][V] + beta[V]) +
-                log(gamma[*rit] + post_omega[*rit-1])
+                //log(gamma[*rit] + post_omega[*rit-1])
+                log(post_omega[*rit-1])
                 );
         }
         post_roles[R + 1] = log(gamma[0]) - log(V);
