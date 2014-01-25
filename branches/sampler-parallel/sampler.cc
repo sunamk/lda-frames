@@ -412,7 +412,7 @@ void Sampler_t::resample_roles_inf(void) {
                             log(post_theta[*rit-1][V] + beta[V])
                             );
                     }
-                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1] + gamma[*rit]));
+                    post_roles[*rit] = prod + BOUNDPROB(log(post_omega[*rit-1])); // + gamma[*rit]));
                 }
             }
 
@@ -670,7 +670,8 @@ bool Sampler_t::sample_new_frame(vector<unsigned int> &frame, vector<unsigned in
             post_roles[*rit] = BOUNDPROB(
                 log(post_theta[*rit-1][pos[s-1]-1] + beta[pos[s-1]-1]) -
                 log(post_theta[*rit-1][V] + beta[V]) +
-                log(gamma[*rit] + post_omega[*rit-1])
+                //log(gamma[*rit] + post_omega[*rit-1])
+                log(post_omega[*rit-1])
                 );
         }
         if (infinite_R) {
