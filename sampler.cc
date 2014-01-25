@@ -518,12 +518,30 @@ void Sampler_t::resample_hypers(unsigned int iters) {
         }
     } else {
         //sample alpha
-        //TODO
-        //for (unsigned int f=1; f<=F+1; ++f) {
-        //    cout << alpha[f-1] << " ";
-        //}
-        //cout << endl;
-        //*/
+        for (set<unsigned int>::const_iterator fit=used_frames.begin();
+                fit!= used_frames.end(); ++fit) {
+            for (unsigned int iter = 0; iter < iters; ++iter) {
+                double oldAlpha = alpha[*fit-1];
+                double nsum = 0;
+                double dsum = 0;
+                for (unsigned int u=1; u<=U; ++u) {
+                    nsum += dist->digamma(post_phi[u-1][*fit-1]+alpha[*fit-1]);
+                    dsum += dist->digamma(post_phi[u-1][F]+alpha[*fit-1]);
+                }
+                alpha[*fit-1] *=
+                    (nsum - U*dist->digamma(alpha[*fit-1]))/
+                    (dsum - U*dist->digamma(alpha[F]));
+                if (alpha[*fit-1]<=0) alpha[*fit-1] = oldAlpha;
+                alpha[F] += alpha[*fit-1] - oldAlpha;
+            }
+        }
+        /*
+        for (set<unsigned int>::const_iterator fit=used_frames.begin();
+                fit!= used_frames.end(); ++fit) {
+            cout << alpha[*fit-1] << " ";
+        }
+        cout << alpha[F] << endl; 
+        */
     }
 }
 
