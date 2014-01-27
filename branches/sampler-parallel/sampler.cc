@@ -489,23 +489,26 @@ void Sampler_t::resample_hypers(unsigned int iters) {
         double adelta = 1.0;
         double aalpha = 1.0;
         double balpha = 1.0;
+        double delta_sum = 0;
+        double alpha0_sum = 0;
 
-        //sample delta
-
-        double eta = dist->sampleBeta(delta + 1, tables);
-        double pi = adelta + used_frames.size() - 1;
-        double rate = 1.0 / bdelta - log(eta);
-        pi = pi / (pi + rate * tables);
-    
-        unsigned int cc = dist->sampleBernoulli(pi);
-        if (cc == 1) {
-            delta = dist->sampleGamma(adelta + used_frames.size(), 1.0 / rate);
-        } else {
-            delta = dist->sampleGamma(adelta + used_frames.size() - 1, 1.0 / rate);
-        }
-    
-        //sample alpha
         for (unsigned int i=0; i<iters; i++) {
+
+            //sample delta
+            double eta = dist->sampleBeta(delta + 1, tables);
+            double pi = adelta + used_frames.size() - 1;
+            double rate = 1.0 / bdelta - log(eta);
+            pi = pi / (pi + rate * tables);
+    
+            unsigned int cc = dist->sampleBernoulli(pi);
+            if (cc == 1) {
+                delta = dist->sampleGamma(adelta + used_frames.size(), 1.0 / rate);
+            } else {
+                delta = dist->sampleGamma(adelta + used_frames.size() - 1, 1.0 / rate);
+            }
+            if (i > iters/2) delta_sum += delta;
+    
+            //sample alpha
             double sum_log_w = 0.0;
             double sum_s = 0.0;
             for (unsigned int u=1; u<=U; ++u) {
@@ -514,8 +517,13 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             }
             rate = 1.0 / balpha - sum_log_w;
             alpha0 = dist->sampleGamma(aalpha + tables - sum_s, 1.0 / rate);
+            if (i > iters/2) alpha0_sum += alpha0;
 
         }
+        delta = 2*delta_sum / iters;
+        alpha0 = 2*alpha0_sum / iters;
+        //cout << endl << delta << " " << alpha0 << endl;
+        
     } else {
         //sample alpha
         for (set<unsigned int>::const_iterator fit=used_frames.begin();
@@ -614,7 +622,7 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int bur
         sample();
         if (i>burn_in && !no_hypers) {
             cout << "hyperparameters..." << flush;
-            resample_hypers(20);
+            resample_hypers(100);
         }
         double p=0;
         if (!no_perplexity) {
