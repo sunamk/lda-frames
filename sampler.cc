@@ -536,9 +536,11 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             double sum_s = 0.0;
             for (unsigned int u=1; u<=U; ++u) {
                 sum_log_w += log(dist->sampleBeta(alpha0 + 1, w[u-1].size()));
-                sum_s += (double)dist->sampleBernoulli(w[u-1].size() / (w[u-1].size() + alpha0));
+                //sum_s += (double)dist->sampleBernoulli(w[u-1].size() / (w[u-1].size() + alpha0));
+                sum_s += (double)dist->sampleBernoulli(w[u-1].size() / alpha0);
             }
-            rate = 1.0 / balpha - sum_log_w;
+            //rate = 1.0 / balpha - sum_log_w;
+            rate = balpha - sum_log_w;
             alpha0 = dist->sampleGamma(aalpha + tables - sum_s, 1.0 / rate);
             if (i > iters/2) alpha0_sum += alpha0;
 
