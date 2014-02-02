@@ -474,15 +474,37 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             beta[V] += beta[v-1] - oldBeta;
         }
     }
-    //sample gamma
-    //TODO
-    /*
-    cout << endl;
-    for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit != used_roles.end(); ++rit) {
-        cout << "(" <<*rit << "," << gamma[*rit] << ") ";
+
+    if (infinite_R) {
+        //sample gamma
+        double bgamma = 1.0;
+        double agamma = 1.0;
+        double gamma0_sum = 0;
+        for (unsigned int i = 1; i <= iters; ++i) {
+            double eta = dist->sampleBeta(gamma0 + 1, S*used_frames.size()); // TODO a co pripady, kdy je slot prazdny?????
+            double pi = agamma + used_roles.size() - 1;
+            //double rate = 1.0 / bgamma - log(eta);
+            double rate = bgamma - log(eta);
+            pi = pi / (pi + rate * S*used_frames.size());
+    
+            unsigned int cc = dist->sampleBernoulli(pi);
+            if (cc == 1) {
+                gamma0 = dist->sampleGamma(agamma + used_roles.size(), 1.0 / rate);
+            } else {
+                gamma0 = dist->sampleGamma(agamma + used_roles.size() - 1, 1.0 / rate);
+            }
+            if (i > iters/2) gamma0_sum += gamma0;
+
+        }
+        cout << endl;
+        gamma0 = 2*gamma0_sum / iters;
+        for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit != used_roles.end(); ++rit) {
+            gamma[*rit] = 2*gamma0_sum / iters;
+            cout << gamma[*rit] << " "; 
+        }
+        gamma[0] = 2*gamma0_sum / iters;
+        cout << gamma[0] << endl;
     }
-    cout << gamma[0] << endl;
-    */
 
     if (infinite_F) {
         double bdelta = 1.0;
@@ -492,12 +514,13 @@ void Sampler_t::resample_hypers(unsigned int iters) {
         double delta_sum = 0;
         double alpha0_sum = 0;
 
-        for (unsigned int i=0; i<iters; i++) {
+        for (unsigned int i=1; i<=iters; i++) {
 
             //sample delta
             double eta = dist->sampleBeta(delta + 1, tables);
             double pi = adelta + used_frames.size() - 1;
-            double rate = 1.0 / bdelta - log(eta);
+            //double rate = 1.0 / bdelta - log(eta);
+            double rate = bdelta - log(eta);
             pi = pi / (pi + rate * tables);
     
             unsigned int cc = dist->sampleBernoulli(pi);
