@@ -480,12 +480,18 @@ void Sampler_t::resample_hypers(unsigned int iters) {
         double bgamma = 1.0;
         double agamma = 1.0;
         double gamma0_sum = 0;
+        double n = 0;
+        for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit!=used_frames.end(); ++fit) {
+            for (unsigned int s = 1; s <= S; ++s) {
+                if (roles[*fit-1][s-1] != 0) n++;
+            }
+        }
         for (unsigned int i = 1; i <= iters; ++i) {
-            double eta = dist->sampleBeta(gamma0 + 1, S*used_frames.size()); // TODO a co pripady, kdy je slot prazdny?????
+            double eta = dist->sampleBeta(gamma0 + 1, n); 
             double pi = agamma + used_roles.size() - 1;
             //double rate = 1.0 / bgamma - log(eta);
             double rate = bgamma - log(eta);
-            pi = pi / (pi + rate * S*used_frames.size());
+            pi = pi / (pi + rate * n);
     
             unsigned int cc = dist->sampleBernoulli(pi);
             if (cc == 1) {
@@ -496,14 +502,14 @@ void Sampler_t::resample_hypers(unsigned int iters) {
             if (i > iters/2) gamma0_sum += gamma0;
 
         }
-        cout << endl;
+        //cout << endl;
         gamma0 = 2*gamma0_sum / iters;
         for (set<unsigned int>::const_iterator rit=used_roles.begin(); rit != used_roles.end(); ++rit) {
             gamma[*rit] = 2*gamma0_sum / iters;
-            cout << gamma[*rit] << " "; 
+            //cout << gamma[*rit] << " "; 
         }
         gamma[0] = 2*gamma0_sum / iters;
-        cout << gamma[0] << endl;
+        //cout << gamma[0] << endl;
     }
 
     if (infinite_F) {
