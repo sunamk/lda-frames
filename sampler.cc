@@ -158,6 +158,7 @@ void Sampler_t::resample_frames(void) {
     }
 }
 
+
 void Sampler_t::resample_frames_inf(void) {
     for (int u = 1; u <= (signed int) U; ++u) {
         for (unsigned int t = 1; t <= w[u-1].size(); ++t) {
@@ -454,6 +455,43 @@ void Sampler_t::resample_roles_inf(void) {
     }
 }
 
+
+void Sampler_t::predict_test(void) {
+    #pragma omp parallel for
+    for (int u = 1; u <= (signed int) U; ++u) {
+        for (unsigned int t = 1; t <= test_w[u-1].size(); ++t) {
+
+            double prob = 0;             
+
+            //compute frame distribution
+            for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end(); 
+                    ++fit) {
+
+                //skip frames that don't satisfy given pattern
+                if (emptyFrames && !checkPattern(roles[*fit-1], test_w[u-1][t-1])) continue;
+
+                double prod = 0;
+                for (unsigned int s = 1; s <= S; ++s) {
+                    if (roles[*fit-1][s-1] != 0) {
+                        prod += BOUNDPROB(
+                                log(post_theta[roles[*fit-1][s-1]-1][test_w[u-1][t-1][s-1]-1] + 
+                                beta[test_w[u-1][t-1][s-1]-1]) -
+                                log(post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
+                                ); 
+                    }
+                }
+                prod += BOUNDPROB(log(post_phi[u-1][*fit-1] + alpha[*fit-1]));
+                if (prod >= prob || fit == used_frames.begin()) {
+                    prob = prod;
+                    test_frames[u-1][t-1] = *fit;
+                }
+            }
+
+        }
+    }
+}
+
+
 void Sampler_t::resample_hypers(unsigned int iters) {
 
     //sample beta
@@ -601,6 +639,11 @@ void Sampler_t::sample(void) {
         cout << "tau..." << flush;
         resample_tau();
     }
+
+    if (testPhase) {
+        cout << "test..." << flush;
+        predict_test();
+    }
     
 }
 
@@ -655,23 +698,30 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int bur
             cout << "hyperparameters..." << flush;
             resample_hypers(100);
         }
-        double p=0;
+        double train_p=0;
+        double test_p=0;
         if (!no_perplexity) {
             cout << "perplexity..." << flush;
-            p = perplexity();
-            if (p < bestPerplexity || i==1) bestPerplexity = p;
+            train_p = perplexity(false);
+            if (testPhase) {
+                test_p = perplexity(true);
+            }
+            if (train_p < bestPerplexity || i==1) bestPerplexity = train_p;
         }
         cout << " (" << used_frames.size() << " frames, " 
              << used_roles.size() << " roles).";
         if (!no_perplexity) {
-            cout << " Perplexity: " << p;
+            cout << " Perplexity: " << train_p;
+            if (testPhase) {
+                cout << ", test perplexity: " << test_p;
+            }
         }
 
         if(infinite_F || infinite_R) {
             pack_FR();
         }
 
-        if (p==bestPerplexity) {
+        if (train_p==bestPerplexity) {
             cout << " *";
             if (!dump(outputDir)) {
                 return false;
@@ -795,22 +845,29 @@ bool Sampler_t::checkPattern(vector<unsigned int> &u, vector<unsigned int> &v) {
 }
 
 
-double Sampler_t::perplexity(void) {
+double Sampler_t::perplexity(bool test) {
+    vector<vector<vector<unsigned int> > > *words = &w; 
+    vector<vector<unsigned int> > *fr = &frames;
+    if(test) {
+        words = &test_w;
+        fr = &test_frames;
+    } 
+
     double loglik = 0;
-    int words = 0;
-    //#pragma omp parallel for
+    int sum = 0;
+    #pragma omp parallel for
     for (unsigned int u=1; u<=U; ++u) {
         double loglik_tmp = 0;
-        int words_tmp = 0;    
-        for (unsigned int t=1; t <= w[u-1].size(); ++t) {
-           unsigned int f = frames[u-1][t-1];
+        int sum_tmp = 0;    
+        for (unsigned int t=1; t <= words->at(u-1).size(); ++t) {
+           unsigned int f = fr->at(u-1)[t-1];
            loglik_tmp += BOUNDPROB(log(post_phi[u-1][f-1]) -
                      log(post_phi[u-1][F]));
            for (unsigned int s=1; s<=S; ++s) {
                 if (roles[f-1][s-1] > 0) {
                     unsigned int r = roles[f-1][s-1];
-                    words_tmp++;
-                    loglik_tmp += BOUNDPROB(log(post_theta[r-1][w[u-1][t-1][s-1]-1]) -
+                    sum_tmp++;
+                    loglik_tmp += BOUNDPROB(log(post_theta[r-1][words->at(u-1)[t-1][s-1]-1]) -
                               log(post_theta[r-1][V]));
                 }
             }
@@ -818,9 +875,9 @@ double Sampler_t::perplexity(void) {
         #pragma omp atomic
         loglik += loglik_tmp;
         #pragma omp atomic
-        words += words_tmp;
+        sum += sum_tmp;
     }
-    return exp(-loglik/words);
+    return exp(-loglik/sum);
 }
 
 
