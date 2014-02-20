@@ -105,18 +105,20 @@ if __name__ == "__main__":
     data_file.close()
     frames_file.close()
 
-    print "Generating realisation distributions..."
+    print "Generating realization distributions..."
     role_database = shelve.open(path+"realdist.db", flag='n',
              protocol=cPickle.HIGHEST_PROTOCOL)
     for role, hist in roles_hist.iteritems():
-        s = 0
-        dist = []
-        for f in hist.itervalues():
-            s+= f
-        for w,f in hist.iteritems():
-            dist.append((w,f*1.0/s))
-        dist = sorted(dist, key=lambda x: -x[1])
-        role_database[role] = dist
+        #dist = nltk.FreqDist(hist)
+        #s = 0
+        #dist = []
+        #for f in hist.itervalues():
+        #    s+= f
+        #for w,f in hist.iteritems():
+        #    dist.append((w,f*1.0/s))
+        #dist = sorted(dist, key=lambda x: -x[1])
+        #smoothed_probs = nltk.probability.LaplaceProbDist(fd)
+        role_database[role] = hist
     role_database.close()
 
     frames_database = shelve.open(path+"frames.db", flag='n',

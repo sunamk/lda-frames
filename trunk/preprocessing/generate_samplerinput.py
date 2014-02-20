@@ -23,8 +23,10 @@ from ldafdict import Dictionary
 
 
 if __name__ == "__main__":
+    test_portion = 0
+    test = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:d:", ["help"])
+        opts, args = getopt.getopt(sys.argv[1:], "ht:o:d:", ["help", "test="])
     except getopt.error, msg:
         print msg
         print "for help use --help"
@@ -33,6 +35,13 @@ if __name__ == "__main__":
         if o in ("-h", "--help"):
             print __doc__
             sys.exit(0)
+        if o in ("-t", "--test"):
+            test_portion = float(a)
+            if (test_portion < 0 or test_portion > 0.5):
+                print "Set portion size must be between 0 and 0.5.\n"
+                sys.exit(1)
+                
+            test = True
 
     if len(args) != 2:
         print "Wrong number of parameters."
@@ -44,7 +53,10 @@ if __name__ == "__main__":
 
     output_file = open(path + "relations.dat", "w")
     dict_file = open(path + "relations.dict", "w")
-
+    test_file = None
+    if(test):
+        test_file = open(path + "test.dat", "w")
+        
     dictionary = Dictionary()
     data = []
 
@@ -81,9 +93,22 @@ if __name__ == "__main__":
     dictionary.permutatePredicates(permutation)
     print "Writing data."
     for p in data:
-        output_file.write("\t".join([" ".join(map(str, r)) for r in p]) + "\n")
+        random.shuffle(p)
+        
+        if test:
+            num = int(len(p)*test_portion)
+            tst = p[:num]
+            trn = p[num:]
+            output_file.write("\t".join([" ".join(map(str, r)) for r in trn]) + "\n")
+            test_file.write("\t".join([" ".join(map(str, r)) for r in tst]) + "\n")
+
+            
+        else:
+            output_file.write("\t".join([" ".join(map(str, r)) for r in p]) + "\n")
 
     output_file.close()
+    if test:
+        test_file.close()
     cPickle.dump(dictionary, dict_file, cPickle.HIGHEST_PROTOCOL)
     dict_file.close()
     f.close()

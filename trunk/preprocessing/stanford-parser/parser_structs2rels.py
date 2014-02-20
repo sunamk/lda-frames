@@ -6,7 +6,7 @@
 
 """Transform resulting structures of Stanford parser to a specified relation format.
 
-USAGE: ./parser_structs2rels.py parse_structs.prs subjobj >  subjobj.rel
+USAGE: ./parser_structs2rels.py parse_structs.prs verb >  verb.rel
 
 """
 
