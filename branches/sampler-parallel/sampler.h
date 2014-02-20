@@ -28,18 +28,19 @@ public:
               long int _seed,
               bool _reestimate_F,
               bool _reestimate_R,
-              unsigned int _cores): F(_F), R(_R), S(0), U(0), V(0),
+              unsigned int _cores,
+              bool _testPhase): F(_F), R(_R), S(0), U(0), V(0),
                             alpha0(_alpha), beta0(_beta), gamma0(_gamma),
                             delta(_delta),
                             seed(_seed),
                             reestimate_F(_reestimate_F), reestimate_R(_reestimate_R),
-                            cores(_cores), infinite_F(false), infinite_R(false),
+                            cores(_cores), testPhase(_testPhase), infinite_F(false), infinite_R(false),
                             startIter(1), initialized(false)
                             {};
 
     ~Sampler_t();
 
-    bool loadData(string inputFileName);
+    bool loadData(string inputFileName, bool test);
 
     bool initialize(bool recovery);
     
@@ -53,6 +54,8 @@ public:
     void printFrames(void);
 
     void printRoles(void);
+    
+    void printTest(void);
 
     bool writeLog(string outputDir, unsigned int citer, unsigned int aiter);
 
@@ -60,7 +63,7 @@ public:
 
     bool recoverData(string dataDir, unsigned int burn_in);
     
-    double perplexity(void);
+    double perplexity(bool test);
 
     double bestPerplexity;
     unsigned int requiredIters;
@@ -82,7 +85,7 @@ private:
     long int seed;
     Distributions_t *dist;
 
-    vector<vector<unsigned int> > frames;
+    vector<vector<unsigned int> > frames, test_frames;
     vector<vector<unsigned int> > roles;
 
     vector<vector<double> > post_phi;
@@ -92,6 +95,7 @@ private:
     bool reestimate_F;
     bool reestimate_R;
     unsigned int cores;
+    bool testPhase;
     bool infinite_F;
     bool infinite_R;
 
@@ -100,7 +104,7 @@ private:
     string inputFile;
     unsigned int startIter;
   
-    vector<vector<vector<unsigned int> > > w;//inputData;
+    vector<vector<vector<unsigned int> > > w, test_w;//inputData;
     vector<unsigned int> fc_f;
     vector<vector<vector<unsigned int> > > fc_fsw;
 
@@ -125,6 +129,7 @@ private:
     void resample_tau(void);
     void resample_hypers(unsigned int iters);
     bool sample_new_frame(vector<unsigned int> &frame, vector<unsigned int> &pos);
+    void predict_test(void);
 
     //inititalization
     bool initialized;

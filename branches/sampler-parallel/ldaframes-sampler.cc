@@ -22,7 +22,7 @@ void outputUsage(const po::options_description& desc, char* prog )
 int main(int argc, char **argv) {
 
     
-    string inputFileName, outputDirectoryName;
+    string inputFileName, outputDirectoryName, testFileName;
 
     unsigned int frames = 0;
     unsigned int roles = 0;
@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
     bool no_perplexity = false;
     bool remove_old_samples = false;
     unsigned int cores = 1;
+    bool testPhase = false;
     
     long int seed = 0;
     
@@ -48,6 +49,7 @@ int main(int argc, char **argv) {
     desc.add_options()
         ("help,h", "Print this help message.")
         ("input-file", po::value<string>(), "Path to the input file.")
+        ("test-file,T", po::value<string>(), "Path to a test file. If the file is not provided, testing is skipped.")
         ("output-directory", po::value<string>(),"Path to the output directory." )
         ("frames,F", po::value<unsigned int>(), 
             "Number of frames (if the value is not specified, it is chosen automatically, starting from 1).")
@@ -127,6 +129,12 @@ int main(int argc, char **argv) {
         outputUsage(desc, argv[0]);
         return 2;
     }
+
+    if (vm.count("test-file"))
+    {
+        testFileName = vm["test-file"].as<string>();
+        testPhase = true;
+    } 
     
     if (vm.count("output-directory"))
     {
@@ -176,12 +184,17 @@ int main(int argc, char **argv) {
     }
 
 
-    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed, reestimate_F, reestimate_R, cores);
+    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed, reestimate_F, reestimate_R, cores, testPhase);
 
     if (!vm.count("recovery")) {
         cout << "Number of iterations is " << iters << "." << endl;
         cout << "Loading input data..." << endl;
-        if (!sampler.loadData(inputFileName)) return 3;
+        if (!sampler.loadData(inputFileName, false)) return 3;
+
+        if (testPhase) {
+            cout << "Loading test data..." << endl;
+            if (!sampler.loadData(testFileName, true)) return 3;
+        }
         cout << "Initializing..." << endl;
         sampler.initialize(false);
 
@@ -194,13 +207,17 @@ int main(int argc, char **argv) {
         }
         cout << "Required number of iterations is " << iters << "." << endl;
         cout << "Loading input data..." << endl;
-        if (!sampler.loadData(inputFileName)) return 3;
+        if (!sampler.loadData(inputFileName, false)) return 3;
+        if (testPhase) {
+            cout << "Loading test data..." << endl;
+            if (!sampler.loadData(testFileName, true)) return 3;
+        }
         sampler.initialize(true);
         cout << "Recovering sampled data..." << endl;
         if (!sampler.recoverData(outputDirectoryName, burn_in)) return 3;
         if (!no_perplexity) {
             cout << "Computing perplexity..." << endl;
-            sampler.bestPerplexity = sampler.perplexity();
+            sampler.bestPerplexity = sampler.perplexity(false);
         }
     }
 
@@ -209,6 +226,8 @@ int main(int argc, char **argv) {
     
     if (printResult) {
         sampler.printFrames();
+        cout << endl << endl;
+        sampler.printTest();
         cout << endl << endl;
         sampler.printRoles();
         cout << endl;

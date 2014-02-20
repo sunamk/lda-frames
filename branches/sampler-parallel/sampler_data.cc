@@ -10,9 +10,17 @@
 #include <cmath>
 #include "sampler.h"
 
-bool Sampler_t::loadData(string inputFileName) {
+bool Sampler_t::loadData(string inputFileName, bool test) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+
+    vector<vector<vector<unsigned int> > > *data;
+
+    if (test) {
+        data = &test_w;
+    } else {
+        data = &w;
+    }
 
     inputFile = inputFileName;
 
@@ -51,14 +59,16 @@ bool Sampler_t::loadData(string inputFileName) {
                 } else {
                     framePattern.push_back(1);
                 }
-                if (V < w) V = w;
+                if (!test) {
+                    if (V < w) V = w;
+                }
                 s.push_back(w);
             }
             if (S==0) {
                 S = s.size();
             } else{
                 if (S != s.size()) {
-                    cout << "Inconsitent number of slots at line no. " << 
+                    cout << "Inconsistent number of slots at line no. " << 
                         progress <<", item no. " << itemcounter << " (" << 
                         *tok_iter << "). \n";
                     ifs.close();
@@ -69,17 +79,33 @@ bool Sampler_t::loadData(string inputFileName) {
             map<vector<unsigned int>, unsigned int>::const_iterator it;
             it = framePatterns.find(framePattern);
             if(it == framePatterns.end()) {
-                framePatterns[framePattern] = 1;
+                if (test) {
+                    cout << "Uknown frame pattern in the test data.\n";
+                    ifs.close();
+                    return false;
+                } else {
+                    framePatterns[framePattern] = 1;
+                }
             } else {
-                framePatterns[framePattern]++;
+                if (!test) framePatterns[framePattern]++;
             }
             positions++;
         }
-        w.push_back(unit);
+        data->push_back(unit);
     }
-    U = w.size();
+    if (test) {
+        if (U != data->size()) {
+            cout << "The number of lexical units in the test set is different from the train data.\n";
+            ifs.close();
+            return false;
+        }
+    } else {
+        U = data->size();
+    }
 
     ifs.close();
+
+    if (test) return true;
 
     cout << "Frame patterns:" << endl;
     unsigned int maxFrames = 0;
@@ -154,6 +180,7 @@ bool Sampler_t::dump(string prefix) {
 
     string ffn = prefix + "frames.smpl";
     string rfn = prefix + "roles.smpl";
+    string tfn = prefix + "test.smpl";
 
     ofstream ffile(ffn.c_str());
     if (!ffile.is_open()) {
@@ -166,6 +193,11 @@ bool Sampler_t::dump(string prefix) {
         ffile.close();
         return false;
     }
+    ofstream tfile(tfn.c_str());
+    if (!tfile.is_open()) {
+        cout << "Cannot open file '" << tfn << "\n";
+        return false;
+    }
 
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t<=w[u-1].size(); ++t) {
@@ -173,6 +205,14 @@ bool Sampler_t::dump(string prefix) {
             if (t != w[u-1].size()) ffile << " ";
         }
         if (u != U) ffile << endl;
+    }
+    
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t<=test_w[u-1].size(); ++t) {
+            tfile << test_frames[u-1][t-1];
+            if (t != test_w[u-1].size()) tfile << " ";
+        }
+        if (u != U) tfile << endl;
     }
 
     for (set<unsigned int>::const_iterator it = used_frames.begin(); it != used_frames.end(); ++it) {
@@ -185,6 +225,7 @@ bool Sampler_t::dump(string prefix) {
 
     ffile.close();
     rfile.close();
+    tfile.close();
     return true;
 }
 
@@ -209,6 +250,17 @@ void Sampler_t::printRoles(void) {
         if (it != used_frames.end()) cout << endl;
     }
 }
+
+void Sampler_t::printTest(void) {
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t<=test_w[u-1].size(); ++t) {
+            cout << test_frames[u-1][t-1];
+            if (t != test_w[u-1].size()) cout << " ";
+        }
+        if (u != U) cout << endl;
+    }
+}
+
 
 
 bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aiter) {

@@ -15,6 +15,7 @@ bool Sampler_t::initialize(bool recovery) {
 
     for (unsigned int u=1; u<=U; ++u) {
         frames.push_back(vector<unsigned int>(w[u-1].size(), 0));
+        if (testPhase) test_frames.push_back(vector<unsigned int>(test_w[u-1].size(), 0));
     }
 
     for (unsigned int f=1; f<=F; ++f) {
