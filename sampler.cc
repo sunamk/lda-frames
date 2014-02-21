@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2014 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <math.h>
 #include <sys/stat.h>
@@ -680,6 +681,28 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int bur
         closedir(dp);
     }
 
+    string histfn = outputDir + "history.txt";
+    ofstream histfile;
+    if (startIter == 1) {
+        histfile.open(histfn.c_str(), std::ofstream::out);
+    } else {
+        histfile.open(histfn.c_str(), std::ofstream::out | std::ofstream::app);
+    }
+    if (!histfile.is_open()) {
+        cout << "Cannot open file '" << histfn << "\n";
+        return false;
+    }
+    
+    if (startIter == 1) {
+        histfile << "iteration\tframes\troles\ttrain_perplexity";
+        if (testPhase) histfile << "\ttest_perplexity";
+        histfile << endl;
+    }
+
+
+    
+
+
     for (unsigned int i = startIter; i < iters+1; ++i) {
         cout << "Iteration no. " << i << ":";
         cout << flush;
@@ -733,7 +756,13 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int bur
             }
         }
         cout << endl;
+
+        histfile << i << "\t" << F << "\t" << R << "\t" << train_p;
+        if (testPhase) histfile << "\t" << test_p;
+        histfile << endl << flush;
     }
+
+    histfile.close();
     
     return true;
 }
