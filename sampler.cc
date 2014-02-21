@@ -881,6 +881,11 @@ double Sampler_t::perplexity(bool test) {
     } 
     double loglik = 0;
     int sum = 0;
+    double tau_sum = 0;
+    for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
+                    ++fit) {
+        tau_sum += tau[*fit];
+    }
     #pragma omp parallel for
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= words->at(u-1).size(); ++t) {
@@ -888,14 +893,24 @@ double Sampler_t::perplexity(bool test) {
                 double loglik_tmp = 0;
                 for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
                     ++fit) {
-                    
-                        loglik_tmp += (post_phi[u-1][*fit-1] + alpha[*fit-1])*
-                                      (post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + 
-                                       beta[words->at(u-1)[t-1][s-1]-1])
-                                       /
-                                       ((post_phi[u-1][F] + alpha[F])*
-                                        (post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
-                                       );
+
+                        if (infinite_F) {
+                            loglik_tmp += (post_phi[u-1][*fit-1] + alpha0*tau[*fit])*
+                                          (post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + 
+                                           beta[words->at(u-1)[t-1][s-1]-1])
+                                           /
+                                           ((post_phi[u-1][F] + used_frames.size()*alpha0*tau_sum)*
+                                            (post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
+                                           );
+                        } else {
+                            loglik_tmp += (post_phi[u-1][*fit-1] + alpha[*fit-1])*
+                                          (post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + 
+                                           beta[words->at(u-1)[t-1][s-1]-1])
+                                           /
+                                           ((post_phi[u-1][F] + alpha[F])*
+                                            (post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
+                                           );
+                        }
 
                 }
                 #pragma omp critical
