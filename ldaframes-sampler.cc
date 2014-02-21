@@ -227,8 +227,10 @@ int main(int argc, char **argv) {
     if (printResult) {
         sampler.printFrames();
         cout << endl << endl;
-        sampler.printTest();
-        cout << endl << endl;
+        if (testPhase) {
+            sampler.printTest();
+            cout << endl << endl;
+        }
         sampler.printRoles();
         cout << endl;
     }

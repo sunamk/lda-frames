@@ -639,12 +639,6 @@ void Sampler_t::sample(void) {
         cout << "tau..." << flush;
         resample_tau();
     }
-
-    if (testPhase) {
-        cout << "test..." << flush;
-        predict_test();
-    }
-    
 }
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int burn_in, bool allSamples,
@@ -844,7 +838,7 @@ bool Sampler_t::checkPattern(vector<unsigned int> &u, vector<unsigned int> &v) {
     return true;
 }
 
-
+/*
 double Sampler_t::perplexity(bool test) {
     vector<vector<vector<unsigned int> > > *words = &w; 
     vector<vector<unsigned int> > *fr = &frames;
@@ -878,7 +872,43 @@ double Sampler_t::perplexity(bool test) {
         sum += sum_tmp;
     }
     return exp(-loglik/sum);
+}*/
+
+double Sampler_t::perplexity(bool test) {
+    vector<vector<vector<unsigned int> > > *words = &w; 
+    if(test) {
+        words = &test_w;
+    } 
+    double loglik = 0;
+    int sum = 0;
+    #pragma omp parallel for
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t <= words->at(u-1).size(); ++t) {
+            for (unsigned int s=1; s<=S; ++s) {
+                double loglik_tmp = 0;
+                for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
+                    ++fit) {
+                    
+                        loglik_tmp += (post_phi[u-1][*fit-1] + alpha[*fit-1])*
+                                      (post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + 
+                                       beta[words->at(u-1)[t-1][s-1]-1])
+                                       /
+                                       ((post_phi[u-1][F] + alpha[F])*
+                                        (post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
+                                       );
+
+                }
+                #pragma omp critical
+                {
+                    loglik += BOUNDPROB(log(loglik_tmp));
+                    sum++;
+                }
+            }
+        }
+    }
+    return exp(-loglik/sum);
 }
+
 
 
 void Sampler_t::pack_FR(void) {

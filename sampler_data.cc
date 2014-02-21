@@ -207,12 +207,14 @@ bool Sampler_t::dump(string prefix) {
         if (u != U) ffile << endl;
     }
     
-    for (unsigned int u=1; u<=U; ++u) {
-        for (unsigned int t=1; t<=test_w[u-1].size(); ++t) {
-            tfile << test_frames[u-1][t-1];
-            if (t != test_w[u-1].size()) tfile << " ";
+    if (testPhase) {
+        for (unsigned int u=1; u<=U; ++u) {
+            for (unsigned int t=1; t<=test_w[u-1].size(); ++t) {
+                tfile << test_frames[u-1][t-1];
+                if (t != test_w[u-1].size()) tfile << " ";
+            }
+            if (u != U) tfile << endl;
         }
-        if (u != U) tfile << endl;
     }
 
     for (set<unsigned int>::const_iterator it = used_frames.begin(); it != used_frames.end(); ++it) {
