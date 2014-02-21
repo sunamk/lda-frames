@@ -10,19 +10,12 @@
 #include <cmath>
 #include "sampler.h"
 
-bool Sampler_t::loadData(string inputFileName, bool test) {
+bool Sampler_t::loadData(string inputFileName) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
 
-    vector<vector<vector<unsigned int> > > *data;
-
-    if (test) {
-        data = &test_w;
-    } else {
-        data = &w;
-        emptyFrames = false;
-        positions = 0;
-    }
+    emptyFrames = false;
+    positions = 0;
 
     inputFile = inputFileName;
 
@@ -52,16 +45,14 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
                 const unsigned int w = atoi(slot_iter->c_str());
                 if (w == 0) {
                     framePattern.push_back(0);
-                    if(!test) emptyFrames = true;
+                    emptyFrames = true;
                     //cout << "Invalid input data: " << *slot_iter << endl;
                     //ifs.close();
                     ///return false;
                 } else {
                     framePattern.push_back(1);
                 }
-                if (!test) {
-                    if (V < w) V = w;
-                }
+                if (V < w) V = w;
                 s.push_back(w);
             }
             if (S==0) {
@@ -79,33 +70,17 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
             map<vector<unsigned int>, unsigned int>::const_iterator it;
             it = framePatterns.find(framePattern);
             if(it == framePatterns.end()) {
-                if (test) {
-                    cout << "Uknown frame pattern in the test data.\n";
-                    ifs.close();
-                    return false;
-                } else {
-                    framePatterns[framePattern] = 1;
-                }
+                framePatterns[framePattern] = 1;
             } else {
-                if (!test) framePatterns[framePattern]++;
+                framePatterns[framePattern]++;
             }
-            if(!test) positions++;
+            positions++;
         }
-        data->push_back(unit);
+        w.push_back(unit);
     }
-    if (test) {
-        if (U != data->size()) {
-            cout << "The number of lexical units in the test set is different from the train data.\n";
-            ifs.close();
-            return false;
-        }
-    } else {
-        U = data->size();
-    }
+    U = w.size();
 
     ifs.close();
-
-    if (test) return true;
 
     cout << "Frame patterns:" << endl;
     unsigned int maxFrames = 0;
@@ -171,6 +146,77 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
     }
     cout << "cores = " << cores << endl;
 
+
+    return true;
+}
+
+
+bool Sampler_t::loadTestData(string inputFileName) {
+
+    typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+
+    inputFile = inputFileName;
+
+    ifstream ifs(inputFileName.c_str());
+    if (!ifs.is_open()) {
+        cout << "Cannot open file " << inputFileName << ".\n";
+        return false;
+    }
+    
+    string line;
+    unsigned long int progress = 0;
+    while (getline(ifs, line)) {
+        progress++;
+        boost::char_separator<char> sep("\t");
+        tokenizer tokens(line, sep);
+        vector<vector<unsigned int> > unit;
+        unsigned long int itemcounter = 0;
+        for (tokenizer::iterator tok_iter = tokens.begin();
+            tok_iter != tokens.end(); ++tok_iter) {
+            itemcounter++;
+            boost::char_separator<char> sep(" ");
+            tokenizer slots(*tok_iter, sep);
+
+            vector<unsigned int> s, framePattern;
+            for (tokenizer::iterator slot_iter = slots.begin();
+                slot_iter != slots.end(); ++slot_iter) {
+                const unsigned int w = atoi(slot_iter->c_str());
+                if (w == 0) {
+                    framePattern.push_back(0);
+                } else {
+                    framePattern.push_back(1);
+                }
+                s.push_back(w);
+            }
+            if (S==0) {
+                S = s.size();
+            } else{
+                if (S != s.size()) {
+                    cout << "Inconsistent number of slots at line no. " << 
+                        progress <<", item no. " << itemcounter << " (" << 
+                        *tok_iter << "). \n";
+                    ifs.close();
+                    return false;
+                }
+            }
+            unit.push_back(s);
+            map<vector<unsigned int>, unsigned int>::const_iterator it;
+            it = framePatterns.find(framePattern);
+            if(it == framePatterns.end()) {
+                cout << "Unknown frame pattern in the test data.\n";
+                ifs.close();
+                return false;
+            } 
+        }
+        test_w.push_back(unit);
+    }
+    if (U != test_w.size()) {
+        cout << "The number of lexical units in the test set is different from the train data.\n";
+        ifs.close();
+        return false;
+    }
+
+    ifs.close();
 
     return true;
 }
