@@ -64,7 +64,7 @@ public:
     bool recoverData(string dataDir, unsigned int burn_in);
     
     double perplexity(bool test);
-
+    
     double bestPerplexity;
     unsigned int requiredIters;
     
