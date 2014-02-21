@@ -20,6 +20,8 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
         data = &test_w;
     } else {
         data = &w;
+        emptyFrames = false;
+        positions = 0;
     }
 
     inputFile = inputFileName;
@@ -32,8 +34,6 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
     
     string line;
     unsigned long int progress = 0;
-    emptyFrames = false;
-    positions = 0;
     while (getline(ifs, line)) {
         progress++;
         boost::char_separator<char> sep("\t");
@@ -52,7 +52,7 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
                 const unsigned int w = atoi(slot_iter->c_str());
                 if (w == 0) {
                     framePattern.push_back(0);
-                    emptyFrames = true;
+                    if(!test) emptyFrames = true;
                     //cout << "Invalid input data: " << *slot_iter << endl;
                     //ifs.close();
                     ///return false;
@@ -89,7 +89,7 @@ bool Sampler_t::loadData(string inputFileName, bool test) {
             } else {
                 if (!test) framePatterns[framePattern]++;
             }
-            positions++;
+            if(!test) positions++;
         }
         data->push_back(unit);
     }
