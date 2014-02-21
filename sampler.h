@@ -40,7 +40,9 @@ public:
 
     ~Sampler_t();
 
-    bool loadData(string inputFileName, bool test);
+    bool loadData(string inputFileName);
+    
+    bool loadTestData(string inputFileName);
 
     bool initialize(bool recovery);
     

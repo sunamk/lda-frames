@@ -189,11 +189,11 @@ int main(int argc, char **argv) {
     if (!vm.count("recovery")) {
         cout << "Number of iterations is " << iters << "." << endl;
         cout << "Loading input data..." << endl;
-        if (!sampler.loadData(inputFileName, false)) return 3;
+        if (!sampler.loadData(inputFileName)) return 3;
 
         if (testPhase) {
             cout << "Loading test data..." << endl;
-            if (!sampler.loadData(testFileName, true)) return 3;
+            if (!sampler.loadTestData(testFileName)) return 3;
         }
         cout << "Initializing..." << endl;
         sampler.initialize(false);
@@ -207,10 +207,10 @@ int main(int argc, char **argv) {
         }
         cout << "Required number of iterations is " << iters << "." << endl;
         cout << "Loading input data..." << endl;
-        if (!sampler.loadData(inputFileName, false)) return 3;
+        if (!sampler.loadData(inputFileName)) return 3;
         if (testPhase) {
             cout << "Loading test data..." << endl;
-            if (!sampler.loadData(testFileName, true)) return 3;
+            if (!sampler.loadTestData(testFileName)) return 3;
         }
         sampler.initialize(true);
         cout << "Recovering sampled data..." << endl;
