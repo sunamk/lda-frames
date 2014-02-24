@@ -12,6 +12,7 @@ with dictionaries, translating realisations and predicates to numbers and vice v
 USAGE: ./generate_samplerinput.py input.rel path
     input.rel             Input file with the grammatical relation data.
     path                  Output path.
+    -t, --test p          Use p*100 % of the data as a test set.
     -h, --help            Print this help.
 """
 
@@ -51,7 +52,7 @@ if __name__ == "__main__":
     path = args[1]
     if not path.endswith("/"): path += "/"
 
-    output_file = open(path + "relations.dat", "w")
+    output_file = open(path + "train.dat", "w")
     dict_file = open(path + "relations.dict", "w")
     test_file = None
     if(test):
