@@ -700,9 +700,6 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int bur
     }
 
 
-    
-
-
     for (unsigned int i = startIter; i < iters+1; ++i) {
         cout << "Iteration no. " << i << ":";
         cout << flush;
@@ -921,25 +918,11 @@ double Sampler_t::perplexity(bool test) {
             for (unsigned int s=1; s<=S; ++s) {
                 double loglik_tmp = 0;
                 for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
-                    ++fit) {
+                        ++fit) {
 
-                        if (infinite_F) {
-                            loglik_tmp += (post_phi[u-1][*fit-1] + alpha0*tau[*fit])*
-                                          (post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + 
-                                           beta[words->at(u-1)[t-1][s-1]-1])
-                                           /
-                                           ((post_phi[u-1][F] + used_frames.size()*alpha0*tau_sum)*
-                                            (post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
-                                           );
-                        } else {
-                            loglik_tmp += (post_phi[u-1][*fit-1] + alpha[*fit-1])*
-                                          (post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + 
-                                           beta[words->at(u-1)[t-1][s-1]-1])
-                                           /
-                                           ((post_phi[u-1][F] + alpha[F])*
-                                            (post_theta[roles[*fit-1][s-1]-1][V] + beta[V])
-                                           );
-                        }
+                    loglik_tmp += post_phi[u-1][*fit-1]*post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1]
+                                  /
+                                  (post_phi[u-1][F]*post_theta[roles[*fit-1][s-1]-1][V]);
 
                 }
                 #pragma omp critical
