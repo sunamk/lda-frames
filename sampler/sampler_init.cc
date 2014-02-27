@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2014 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -15,6 +15,7 @@ bool Sampler_t::initialize(bool recovery) {
 
     for (unsigned int u=1; u<=U; ++u) {
         frames.push_back(vector<unsigned int>(w[u-1].size(), 0));
+        if (testPhase) test_frames.push_back(vector<unsigned int>(test_w[u-1].size(), 0));
     }
 
     for (unsigned int f=1; f<=F; ++f) {
@@ -34,6 +35,10 @@ bool Sampler_t::initialize(bool recovery) {
         gamma[r] = gamma0;
     }
     gamma[0] = gamma0;
+
+    if (cores != 0) {
+        omp_set_num_threads(cores);
+    }
 
     if (!recovery) {
         cout << "Initializing variables..." << endl;
@@ -56,10 +61,12 @@ void Sampler_t::initialize_roles(void) {
     if (!infinite_F) {
         double boundary = 0;
         unsigned int f = 1;
+
+
         for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
                 it != framePatterns.end(); ++it) {
             boundary += (((double) it->second) / positions)*(F - framePatterns.size()) + 1;
-
+        
             while (f <= round(boundary)) {
                 do {
                    for (unsigned int s=1; s<=S; ++s) {
