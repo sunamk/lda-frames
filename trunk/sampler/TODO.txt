@@ -1,3 +1,0 @@
-* estimate gamma
-* estimate alpha for the finite version
-* parallelization

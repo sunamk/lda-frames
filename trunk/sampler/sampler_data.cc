@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
+ * Copyright (C) 2014 Jiri Materna <xmaterna@fi.muni.cz>
  * Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
  *
  */
@@ -14,6 +14,9 @@ bool Sampler_t::loadData(string inputFileName) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
 
+    emptyFrames = false;
+    positions = 0;
+
     inputFile = inputFileName;
 
     ifstream ifs(inputFileName.c_str());
@@ -24,8 +27,6 @@ bool Sampler_t::loadData(string inputFileName) {
     
     string line;
     unsigned long int progress = 0;
-    emptyFrames = false;
-    positions = 0;
     while (getline(ifs, line)) {
         progress++;
         boost::char_separator<char> sep("\t");
@@ -58,7 +59,7 @@ bool Sampler_t::loadData(string inputFileName) {
                 S = s.size();
             } else{
                 if (S != s.size()) {
-                    cout << "Inconsitent number of slots at line no. " << 
+                    cout << "Inconsistent number of slots at line no. " << 
                         progress <<", item no. " << itemcounter << " (" << 
                         *tok_iter << "). \n";
                     ifs.close();
@@ -138,6 +139,84 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
+    if (cores < 0 || cores > (unsigned int) omp_get_max_threads()) {
+        cout << "Wrong number of cores (" << cores << "). It must be between 0 and "<<
+                omp_get_max_threads() << "." << endl;
+        return false;
+    }
+    cout << "cores = " << cores << endl;
+
+
+    return true;
+}
+
+
+bool Sampler_t::loadTestData(string inputFileName) {
+
+    typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+
+    inputFile = inputFileName;
+
+    ifstream ifs(inputFileName.c_str());
+    if (!ifs.is_open()) {
+        cout << "Cannot open file " << inputFileName << ".\n";
+        return false;
+    }
+    
+    string line;
+    unsigned long int progress = 0;
+    while (getline(ifs, line)) {
+        progress++;
+        boost::char_separator<char> sep("\t");
+        tokenizer tokens(line, sep);
+        vector<vector<unsigned int> > unit;
+        unsigned long int itemcounter = 0;
+        for (tokenizer::iterator tok_iter = tokens.begin();
+            tok_iter != tokens.end(); ++tok_iter) {
+            itemcounter++;
+            boost::char_separator<char> sep(" ");
+            tokenizer slots(*tok_iter, sep);
+
+            vector<unsigned int> s, framePattern;
+            for (tokenizer::iterator slot_iter = slots.begin();
+                slot_iter != slots.end(); ++slot_iter) {
+                const unsigned int w = atoi(slot_iter->c_str());
+                if (w == 0) {
+                    framePattern.push_back(0);
+                } else {
+                    framePattern.push_back(1);
+                }
+                s.push_back(w);
+            }
+            if (S==0) {
+                S = s.size();
+            } else{
+                if (S != s.size()) {
+                    cout << "Inconsistent number of slots at line no. " << 
+                        progress <<", item no. " << itemcounter << " (" << 
+                        *tok_iter << "). \n";
+                    ifs.close();
+                    return false;
+                }
+            }
+            unit.push_back(s);
+            map<vector<unsigned int>, unsigned int>::const_iterator it;
+            it = framePatterns.find(framePattern);
+            if(it == framePatterns.end()) {
+                cout << "Unknown frame pattern in the test data.\n";
+                ifs.close();
+                return false;
+            } 
+        }
+        test_w.push_back(unit);
+    }
+    if (U != test_w.size()) {
+        cout << "The number of lexical units in the test set is different from the train data.\n";
+        ifs.close();
+        return false;
+    }
+
+    ifs.close();
 
     return true;
 }
@@ -147,6 +226,7 @@ bool Sampler_t::dump(string prefix) {
 
     string ffn = prefix + "frames.smpl";
     string rfn = prefix + "roles.smpl";
+    string tfn = prefix + "test.smpl";
 
     ofstream ffile(ffn.c_str());
     if (!ffile.is_open()) {
@@ -159,6 +239,11 @@ bool Sampler_t::dump(string prefix) {
         ffile.close();
         return false;
     }
+    ofstream tfile(tfn.c_str());
+    if (!tfile.is_open()) {
+        cout << "Cannot open file '" << tfn << "\n";
+        return false;
+    }
 
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t<=w[u-1].size(); ++t) {
@@ -166,6 +251,16 @@ bool Sampler_t::dump(string prefix) {
             if (t != w[u-1].size()) ffile << " ";
         }
         if (u != U) ffile << endl;
+    }
+    
+    if (testPhase) {
+        for (unsigned int u=1; u<=U; ++u) {
+            for (unsigned int t=1; t<=test_w[u-1].size(); ++t) {
+                tfile << test_frames[u-1][t-1];
+                if (t != test_w[u-1].size()) tfile << " ";
+            }
+            if (u != U) tfile << endl;
+        }
     }
 
     for (set<unsigned int>::const_iterator it = used_frames.begin(); it != used_frames.end(); ++it) {
@@ -178,6 +273,7 @@ bool Sampler_t::dump(string prefix) {
 
     ffile.close();
     rfile.close();
+    tfile.close();
     return true;
 }
 
@@ -202,6 +298,17 @@ void Sampler_t::printRoles(void) {
         if (it != used_frames.end()) cout << endl;
     }
 }
+
+void Sampler_t::printTest(void) {
+    for (unsigned int u=1; u<=U; ++u) {
+        for (unsigned int t=1; t<=test_w[u-1].size(); ++t) {
+            cout << test_frames[u-1][t-1];
+            if (t != test_w[u-1].size()) cout << " ";
+        }
+        if (u != U) cout << endl;
+    }
+}
+
 
 
 bool Sampler_t::writeLog(string outputDir, unsigned int citer, unsigned int aiter) {
