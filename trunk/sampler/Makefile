@@ -1,6 +1,6 @@
 CXX = g++
-#CXXFLAGS = -g -Wall -pedantic -fopenmp
-CXXFLAGS = -Wall -pedantic -fopenmp -O4
+CXXFLAGS = -g -Wall -pedantic -fopenmp
+#CXXFLAGS = -Wall -pedantic -fopenmp -O4
 
 LIBS = -lm -lgsl -lgslcblas -lboost_program_options
 

@@ -912,13 +912,14 @@ double Sampler_t::perplexity(bool test) {
                     ++fit) {
         tau_sum += tau[*fit];
     }
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= words->at(u-1).size(); ++t) {
             for (unsigned int s=1; s<=S; ++s) {
                 double loglik_tmp = 0;
                 for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
                         ++fit) {
+                    if (!checkPattern(roles[*fit-1], w[u-1][t-1]) || roles[*fit-1][s-1] == 0) continue;
 
                     loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta0)
                                   /
