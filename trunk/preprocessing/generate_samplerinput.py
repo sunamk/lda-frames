@@ -13,6 +13,7 @@ USAGE: ./generate_samplerinput.py input.rel path
     input.rel             Input file with the grammatical relation data.
     path                  Output path.
     -t, --test p          Use p*100 % of the data as a test set.
+    -l, --linear          Linear processign of the data (it is shuffled by default)
     -h, --help            Print this help.
 """
 
@@ -26,8 +27,9 @@ from ldafdict import Dictionary
 if __name__ == "__main__":
     test_portion = 0
     test = False
+    shuffle = True
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ht:o:d:", ["help", "test="])
+        opts, args = getopt.getopt(sys.argv[1:], "hlt:o:d:", ["help", "linear", "test="])
     except getopt.error, msg:
         print msg
         print "for help use --help"
@@ -36,6 +38,8 @@ if __name__ == "__main__":
         if o in ("-h", "--help"):
             print __doc__
             sys.exit(0)
+        if o in ("-l", "--linear"):
+            shuffle = False
         if o in ("-t", "--test"):
             test_portion = float(a)
             if (test_portion < 0 or test_portion > 0.5):
@@ -85,16 +89,18 @@ if __name__ == "__main__":
         data[pid-1].append(slots)
 
     #shuffle lines
-    random.seed(None)
-    permutation = zip(xrange(len(data)), random.sample(xrange(len(data)), len(data)))
-    for swap in permutation:
-        tmp = data[swap[0]]
-        data[swap[0]] = data[swap[1]]
-        data[swap[1]] = tmp
-    dictionary.permutatePredicates(permutation)
+    if shuffle:
+        random.seed(None)
+        permutation = zip(xrange(len(data)), random.sample(xrange(len(data)), len(data)))
+        for swap in permutation:
+            tmp = data[swap[0]]
+            data[swap[0]] = data[swap[1]]
+            data[swap[1]] = tmp
+        dictionary.permutatePredicates(permutation)
     print "Writing data."
     for p in data:
-        random.shuffle(p)
+        if shuffle:
+            random.shuffle(p)
         
         if test:
             num = int(len(p)*test_portion)

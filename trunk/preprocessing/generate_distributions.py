@@ -40,7 +40,7 @@ if __name__ == "__main__":
     path = args[0]
     if not path.endswith("/"): path += "/"
     dict_file_name = path + "relations.dict"
-    data_file_name = path + "relations.dat"
+    data_file_name = path + "train.dat"
     frames_file_name = path + "frames.smpl"
     roles_file_name = path + "roles.smpl"
 

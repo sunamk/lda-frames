@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013 Jiri Materna <xmaterna@fi.muni.cz>
+# Copyright (C) 2014 Jiri Materna <xmaterna@fi.muni.cz>
 # Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
 #
 
@@ -12,16 +12,23 @@
 
 =Example=
 
-#$ utils/randomData.py data/test/test.rel 0
+#$ utils/randomData.py data/synthetic/synthetic.rel 0
 
-$ preprocessing/generate_samplerinput.py data/test/test.rel data/test/
+#Generate input data for the sampler along with a dictionary.
+$ preprocessing/generate_samplerinput.py -l data/synthetic/synthetic.rel data/synthetic/
 
-$ sampler/ldaframes-sampler --seed=1 -I 200 data/test/relations.dat data/test/
+#Run the Non-Parametric LDA-Frames sampler with 200 iterations.
+$ sampler/ldaframes-sampler --seed=1 -I 200 data/synthetic/train.dat data/synthetic/
 
-$ utils/evaluateRandom.py data/test/test.rel.chck data/test/
+#Evaluate the produced frames against the original data.
+$ utils/evaluateRandom.py data/synthetic/synthetic.rel.chck data/synthetic/
 
-$ preprocessing/generate_distributions.py data/test/
+#Generate frame distributions for lexical units and word distributions for semantic roles.
+$ preprocessing/generate_distributions.py data/synthetic/
 
-$ libldaf/showFrames.py -r 4 data/test/ eat
+#Generate similatity matrix for all lexical units (based on the comparison of their frame distributions).
+$ preprocessing/generate_similarities.py data/synthetic/
 
+#Show generated semantic frames for lexical unit "eat".
+$ libldaf/showFrames.py -r 4 data/synthetic/ eat
 

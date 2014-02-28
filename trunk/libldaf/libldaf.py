@@ -10,6 +10,7 @@ Library for accessing semantic frames stored in a database.
 import shelve
 import anydbm
 import numpy
+import nltk
 from scipy.spatial.distance import euclidean
 
 
@@ -19,8 +20,16 @@ class LDAF():
         try:
             self.frames = shelve.open(path + "frames.db", flag='r')
             self.frameDist = shelve.open(path + "framedist.db", flag='r')
-            self.realDist = shelve.open(path + "realdist.db", flag='r')
             self._SQRT2 = numpy.sqrt(2)
+    
+            realHist = shelve.open(path + "realdist.db", flag='r')
+            self.realDist = {}
+            for role, hist in realHist.iteritems():
+                freqdist = nltk.FreqDist(hist)
+                freqsum = freqdist.N()
+                relativeFreqs = map(lambda x:(x[0], x[1]*1.0/freqsum), freqdist.items())
+                smoothedFreqs = nltk.probability.LaplaceProbDist(freqdist)
+                self.realDist[role] = (relativeFreqs, smoothedFreqs)
         except anydbm.error, msg:
             print "Cannot open database files."
             raise
@@ -44,11 +53,27 @@ class LDAF():
         except KeyError:
             return None
     
-    def getRealDist(self, realization, limit=None):
+    def getRealDist(self, role, limit=None):
        if limit==None:
-           return self.realDist[realization]
+           return self.realDist[role][0]
        else:
-           return self.realDist[realization][:limit]
+           return self.realDist[role][0][:limit]
+
+    def getRealProb(self, realization, role):
+        return self.realDist[str(role)][1].prob(realization)
+
+    def getFrameProbs(self, predicate, realizations):
+        frameProbs = []
+        frameDist = self.getFrameDist(predicate)
+        for (f, p) in frameDist:
+            frame = self.getFrame(str(f))
+            if len(frame) != len(realizations):
+                raise Exception("The number of slots is inconsistent.")
+            for s, r in enumerate(frame):
+                p *= self.getRealProb(realizations[s], r)
+            frameProbs.append((f, p)) 
+        return sorted(frameProbs, key=lambda x: -x[1])
+        
         
     def getF(self):
         return self.frames["__F__"]
