@@ -3,16 +3,67 @@
 # Licensed under the GNU GPLv3 - http://www.gnu.org/licenses/gpl-3.0.html
 #
 
-=Installation=
+=Introduction=
 
-=Input Data=
+LDA-frames is an approach to identifying semantic frames from semantically unlabelled text corpora. 
+There are many frame formalisms but most of them suffer from the problem that all the frames must 
+be created manually and the set of semantic roles must be predefined. The LDA-Frames approach, 
+based on the Latent Dirichlet Allocation, avoids both these problems by employing statistics on 
+a syntactically tagged corpus. The only information that must be given is a number of semantic 
+frames and a number of semantic roles to be identified. This limitation, however, can be avoided 
+by automatic estimation of both these parameters. The model which is able to estimate the number 
+of frames and roles automatically is called Non-parametric LDA-Frames.
 
-=Data preprocessing=
+=Dependencies=
+    Python >= 2.5
+    Java 6 >= JDK 1.6 (Only when using the Stanford parser for generating the syntactic dependencies.)
+    g++ >= 4.6
+    Boost program options development package >= 1.46
+    GNU Scientific Library (GSL) development package >= 1.15
+    OpenMP (Only when using the multithreaded sampler)
+    
+
+=Bulding binaries from the source codes on Ubuntu 13.10.=
+
+#Install necessary dependencies.
+$ sudo apt-get install g++ libboost-program-options-dev libgsl0-dev
+
+#Move into the working directory of the sampler.
+$ cd sampler
+
+# Build the binary file.
+$ make
+
+=Input and Output Data=
+
+The input data for the sampler must have the form of a text file where each line corresponds to one 
+lexical unit. Each line consists of tabulator-separated corpus realizations, where each realization 
+is composed of space-separated positive integers that represent word identifiers for all slots. The 
+number 0 is reserved for an empty slot. An example of the input file for 3 lexical units with 
+two-slot realizations is shown below. 
+
+1 2	3 4	2 3
+4 2	1 3	3 2	3 2
+4 4	3 4	4 0
+
+In order to be able to interpret the result, a dictionary that translates the line numbers into lexical 
+units and word identifiers into words is required. The dictionary along with the sampler input file can 
+be generated using the _generate-samplerinput.py_ script. As its input, it takes a text file where each 
+line consists of a lexical unit and tabulator-separated realization from a corpus. The first line must 
+start with ';', and consists of tabulator-separated names of used grammatical relations. For example:
+
+;SUBJECT	OBJECT
+eat	people	cake
+eat	man	bread
+cook	woman	cake
+
+The result produced by the sampler comprises two files -- "frames.smpl", which contains frame identifiers 
+corresponding to the realization positions in the input file, and "roles.smpl", which contains as many 
+rows as and the number of frames, and as many columns as the number of slots. The numbers there represent 
+semantic role identifiers.
 
 
-=Example=
-
-#$ utils/randomData.py data/synthetic/synthetic.rel 0
+=Example of the Usage=
 
 #Generate input data for the sampler along with a dictionary.
 $ preprocessing/generate_samplerinput.py -l data/synthetic/synthetic.rel data/synthetic/
