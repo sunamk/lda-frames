@@ -921,9 +921,12 @@ double Sampler_t::perplexity(bool test) {
                         ++fit) {
                     if (!checkPattern(roles[*fit-1], w[u-1][t-1]) || roles[*fit-1][s-1] == 0) continue;
 
-                    loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta0)
+                    //loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta0)
+                    //              /
+                    //              (post_phi[u-1][F]*(post_theta[roles[*fit-1][s-1]-1][V] + V*beta0));
+                    loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta[words->at(u-1)[t-1][s-1]-1])
                                   /
-                                  (post_phi[u-1][F]*(post_theta[roles[*fit-1][s-1]-1][V] + V*beta0));
+                                  (post_phi[u-1][F]*(post_theta[roles[*fit-1][s-1]-1][V] + beta[V]));
 
                 }
                 #pragma omp critical
