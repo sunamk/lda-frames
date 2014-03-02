@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     bool allSamples = false;
     bool reestimate_F = false;
     bool reestimate_R = false;
-    bool no_hypers = false;
+    bool no_hypers = true;
     bool no_perplexity = false;
     bool remove_old_samples = false;
     unsigned int cores = 1;
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
         ("cores,C", po::value<unsigned int>(), "number of cores (default is 1, 0 = all available cores). This feature works only when a fixed number of frames and roles is given).")
         ("reestimate_F","Reestimate number of frames automatically.")
         ("reestimate_R","Reestimate number of roles automatically.")
-        ("no_hypers", "Do not estimate hyperparameters.")
+        ("hypers", "Estimate hyperparameters.")
         ("no_perplexity", "Do not compute perplexity.")
         ("rm", "Remove old samples from the output directory.")
         ("all-samples,A", "Save samples of all iterations.")
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     }
     
     if (vm.count("no_hypers")) {
-        no_hypers = true;
+        no_hypers = false;
     }
     
     if (vm.count("no_perplexity")) {
