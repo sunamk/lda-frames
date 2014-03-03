@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         reestimate_R = true;
     }
     
-    if (vm.count("no_hypers")) {
+    if (vm.count("hypers")) {
         no_hypers = false;
     }
     
