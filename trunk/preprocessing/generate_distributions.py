@@ -50,6 +50,7 @@ if __name__ == "__main__":
     roles_file = None
     F = 0
     R = 0
+    vocabulary = 0
     try:
         dict_file = open(dict_file_name)
         data_file = open(data_file_name)
@@ -87,6 +88,9 @@ if __name__ == "__main__":
         frames_hist = {}
         
         for rtuple, frame in izip(data, frames):
+            m = max(map(int, rtuple.split(" ")))
+            if vocabulary < m:
+                vocabulary = m
             rtuple = map(lambda x: dictionary.id2real(int(x)), rtuple.split(" "))
             frames_hist[frame] = frames_hist.get(frame, 0) + 1
             for role, realisation in izip(roles[frame-1], rtuple):
@@ -128,7 +132,7 @@ if __name__ == "__main__":
     frames_database["__description__"] = dictionary.getRelations()
     frames_database["__F__"] = F
     frames_database["__R__"] = R
+    frames_database["__V__"] = vocabulary
     frames_database.close()
-        
         
 

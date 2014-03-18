@@ -43,6 +43,13 @@ def is_verb(tag):
     else:
         return False
 
+def is_verb_active(tag):
+    if tag=="VB" or tag=="VBD" or tag=="VBG" or \
+             tag=="VBP" or tag=="VBZ":
+        return True
+    else:
+        return False
+
 def is_adverb(tag):
     if tag=="RB" or tag=="RBR" or tag=="RBS":
         return True
@@ -151,7 +158,7 @@ def verb(parseResult, desc=False):
             try:
                 entry = (normalize(lemmas[get_id(k) - 1], tags[get_id(k) - 1]), 
                     v[0], v[1],v[2], v[3])
-                if "" in entry or not is_verb(tags[get_id(k) - 1]):
+                if "" in entry or not is_verb_active(tags[get_id(k) - 1]):
                     continue
                 result.append(entry)
             except ValueError:
@@ -164,8 +171,8 @@ def verb(parseResult, desc=False):
 def verbAll(parseResult, desc=False):
     """Generates all grammatical relations for verbs."""
     if desc == True:
-        return ";advcl\tagent\tcsubj_csubjpass\tdobj\tiobj\tsubj_nsubjpass\tprep\tprepc\tprt\ttmod"
-    emptySlots = ["NONE","NONE","NONE","NONE","NONE","NONE","NONE","NONE","NONE","NONE"]
+        return ";advcl\tagent\tcsubj_csubjpass\tdobj\tiobj\tsubj_nsubjpass\tprep\tprt\ttmod"
+    emptySlots = ["NONE","NONE","NONE","NONE","NONE","NONE","NONE","NONE","NONE"]
 
     result = []
     for sentence in parseResult:
@@ -241,30 +248,23 @@ def verbAll(parseResult, desc=False):
                     rels[dep[1]] = copy.copy(emptySlots)
                     rels[dep[1]][6] = l2
             
-            elif  dep[0] == "prepc":
-                try:
-                    rels[dep[1]][7] = l2
-                except KeyError:
-                    rels[dep[1]] = copy.copy(emptySlots)
-                    rels[dep[1]][7] = l2
-            
             elif  dep[0] == "prt":
                 try:
-                    rels[dep[1]][8] = l2
+                    rels[dep[1]][7] = l2
                 except KeyError:
                     rels[dep[1]] = copy.copy(emptySlots)
-                    rels[dep[1]][8] = l2
+                    rels[dep[1]][7] = l2
             
             elif  dep[0] == "tmod":
                 try:
-                    rels[dep[1]][9] = l2
+                    rels[dep[1]][8] = l2
                 except KeyError:
                     rels[dep[1]] = copy.copy(emptySlots)
-                    rels[dep[1]][9] = l2
+                    rels[dep[1]][8] = l2
         for k, v in rels.iteritems():
             try:
                 entry = (normalize(lemmas[get_id(k) - 1], tags[get_id(k) - 1]), 
-                    v[0], v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9])
+                    v[0], v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8])
                 if "" in entry or not is_verb(tags[get_id(k) - 1]):
                     continue
                 result.append(entry)
