@@ -16,11 +16,12 @@ from scipy.spatial.distance import euclidean
 
 class LDAF():
     
-    def __init__(self, path):
+    def __init__(self, path, smoothing=0):
         try:
             self.frames = shelve.open(path + "frames.db", flag='r')
             self.frameDist = shelve.open(path + "framedist.db", flag='r')
             self._SQRT2 = numpy.sqrt(2)
+            self.smoothing = smoothing
     
             realHist = shelve.open(path + "realdist.db", flag='r')
             self.realDist = {}
@@ -28,7 +29,9 @@ class LDAF():
                 freqdist = nltk.FreqDist(hist)
                 freqsum = freqdist.N()
                 relativeFreqs = map(lambda x:(x[0], x[1]*1.0/freqsum), freqdist.items())
-                smoothedFreqs = nltk.probability.LaplaceProbDist(freqdist)
+                #smoothedFreqs = nltk.probability.LaplaceProbDist(freqdist)
+                smoothedFreqs = dict(map(lambda x:(x[0], \
+                    (x[1]+smoothing)*1.0/(freqsum+self.getV()*smoothing)), freqdist.items()))
                 self.realDist[role] = (relativeFreqs, smoothedFreqs)
         except anydbm.error, msg:
             print "Cannot open database files."
@@ -60,7 +63,11 @@ class LDAF():
            return self.realDist[role][0][:limit]
 
     def getRealProb(self, realization, role):
-        return self.realDist[str(role)][1].prob(realization)
+        #return self.realDist[str(role)][1].prob(realization)
+        try:
+            return self.realDist[str(role)][1][realization]
+        except KeyError:
+            return 1.0*self.smoothing/(self.getV()*self.smoothing)
 
     def getFrameProbs(self, predicate, realizations):
         frameProbs = []
@@ -70,6 +77,8 @@ class LDAF():
             if len(frame) != len(realizations):
                 raise Exception("The number of slots is inconsistent.")
             for s, r in enumerate(frame):
+                if realizations[s] == "-":
+                    continue
                 p *= self.getRealProb(realizations[s], r)
             frameProbs.append((f, p)) 
         return sorted(frameProbs, key=lambda x: -x[1])
@@ -80,6 +89,9 @@ class LDAF():
 
     def getR(self):
         return self.frames["__R__"]
+    
+    def getV(self):
+        return self.frames["__V__"]
 
     def getHellingerDistance(self, v1, v2):
         return  euclidean(numpy.sqrt(v1),  numpy.sqrt(v2)) / self._SQRT2
