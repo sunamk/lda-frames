@@ -84,6 +84,7 @@ bool Sampler_t::loadData(string inputFileName) {
 
     cout << "Frame patterns:" << endl;
     unsigned int maxFrames = 0;
+    unsigned int minRoles = 0;
     for (map<vector<unsigned int>, unsigned int>::const_iterator it=framePatterns.begin();
             it != framePatterns.end(); ++it) {
         unsigned int usedSlots = 0;
@@ -94,9 +95,26 @@ bool Sampler_t::loadData(string inputFileName) {
         }
         cout << "]: " << it->second << " (" << round(100*((double)it->second / positions)) 
              << " %)" << endl;
-        unsigned int maxFr = floor(pow(R, usedSlots)/((double)it->second / positions));
-        if (maxFrames==0 || maxFrames > maxFr) maxFrames = maxFr;
+        unsigned int maxFr = floor((pow(R, usedSlots)-1)/((double)it->second / positions) +
+            framePatterns.size());
+
+        unsigned int minRl;
+        if (F != 0) {
+            minRl = ceil(exp(log(F*((double)it->second / positions))/usedSlots));
+        } else {
+            minRl = 1;
+        }
+
+        if (maxFrames==0 || maxFrames > maxFr) {
+            maxFrames = maxFr;
+        }
+        
+        if (minRoles==0 || minRoles < minRl) {
+            minRoles = minRl;
+        }
     }
+    
+    cout << "Number of patterns: " << framePatterns.size() << endl;
     if (F == 0) {
         cout << "F = automatic" << endl;
         infinite_F = true;
@@ -108,25 +126,24 @@ bool Sampler_t::loadData(string inputFileName) {
     }
     if (R == 0) {
         infinite_R = true;
-        //this is untrue in the case of multiple frame patterns
-        R = ceil(exp(log(F)/S)); //minimum number of roles
+        //this is false in the case of multiple frame patterns
+        //R = ceil(exp(log(F)/S)); //minimum number of roles
+        R = minRoles;
         cout << "R = automatic (min. " << R << ")" << endl;
     } else {
         cout << "R = " << R;
         if (reestimate_R) cout << " (will be reestimated)";
         cout << endl;
     }
-
     
-    if (F > maxFrames && !infinite_F) {
-        cout << "Number of frames (F) must be lower than or equal to the number of all " <<
-                "possible combinations of semantic roles (" << maxFrames << ")." << 
-                endl;
+    if (F > maxFrames && !infinite_F && !infinite_R) {
+        cout << "The number of frames (F) must be lower than or equal to the number of all " <<
+                "possible combinations of semantic roles (" << maxFrames << ")." << endl;
         return false;
     }
     if (F < framePatterns.size() && !infinite_F) {
         cout << "Number of frames (F) must be higher or equal to the number of different " <<
-                "frame patterns in the input data." << endl;
+                "frame patterns in the input data (" << framePatterns.size() << ")." << endl;
         return false;
     }
     
