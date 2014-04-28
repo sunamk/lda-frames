@@ -63,17 +63,27 @@ if __name__ == "__main__":
         evalFile.close()
 
     correct = 0
+    wrong = 0
+    skipped = 0
     allRealizations = 0
     for l in inputFile.xreadlines():
         l = l.strip().split("\t")
         pred = l[0]
         reals = l[1:len(l)-1]
         frame = l[len(l)-1]
-        allRealizations += 1 
+        allRealizations += 1
         if evaluate:
-            print pred, reals, frame, ldaf.getFrameProbs(pred, reals)[:4]
-            if str(ldaf.getFrameProbs(pred, reals)[0][0]) in mapping[pred][frame]:
-                correct += 1
+            s = "s"
+            try:
+                if str(ldaf.getFrameProbs(pred, reals)[0][0]) in mapping[pred][frame]:
+                    correct += 1
+                    s = "o"
+                else:
+                    s = "x"
+                    wrong += 1
+            except KeyError:
+                skipped += 1
+            print pred, s, reals, frame, ldaf.getFrameProbs(pred, reals)[:4]
                 
         else:
             print ldaf.getFrameProbs(pred, reals)[:4]
@@ -82,3 +92,5 @@ if __name__ == "__main__":
 
     if evaluate:
         sys.stderr.write("Accuracy: %f\n" %(correct*1.0/allRealizations))
+        sys.stderr.write("Precision: %f\n" %(correct*1.0/(correct + wrong)))
+        sys.stderr.write("Recall: %f\n" %(correct*1.0/(correct + skipped)))

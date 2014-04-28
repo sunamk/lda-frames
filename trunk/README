@@ -16,6 +16,9 @@ of frames and roles automatically is called Non-parametric LDA-Frames.
 
 =Dependencies=
     Python >= 2.5
+    Numpy >= 1.6
+    NLTK >= 2.0
+    Scipy >= 0.9
     Java 6 >= JDK 1.6 (Only when using the Stanford parser for generating the syntactic dependencies.)
     g++ >= 4.6
     Boost program options development package >= 1.46
@@ -26,7 +29,7 @@ of frames and roles automatically is called Non-parametric LDA-Frames.
 =Bulding binaries from the source codes on Ubuntu 13.10.=
 
 #Install necessary dependencies.
-$ sudo apt-get install g++ libboost-program-options-dev libgsl0-dev
+$ sudo apt-get install g++ libboost-program-options-dev libgsl0-dev python-numpy python-nltk python-scipy
 
 #Move into the working directory of the sampler.
 $ cd sampler
@@ -69,7 +72,7 @@ semantic role identifiers.
 $ preprocessing/generate_samplerinput.py -l data/synthetic/synthetic.rel data/synthetic/
 
 #Run the Non-Parametric LDA-Frames sampler with 200 iterations.
-$ sampler/ldaframes-sampler --seed=1 -I 200 data/synthetic/train.dat data/synthetic/
+$ sampler/ldaframes-sampler --seed=1 -I 100 data/synthetic/train.dat data/synthetic/
 
 #Evaluate the produced frames against the original data.
 $ utils/evaluateRandom.py data/synthetic/synthetic.rel.chck data/synthetic/
