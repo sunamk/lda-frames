@@ -72,7 +72,7 @@ if __name__ == "__main__":
     for line in f.xreadlines():
         progress += 1
         if progress % 100000 == 0:
-            print "Progress at line no. #%d." % progress
+            print "Progress at line #%d." % progress
         line = line.strip()
         if line == "": continue
         items = line.split("\t")
