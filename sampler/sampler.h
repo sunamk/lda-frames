@@ -11,7 +11,9 @@
 #include <set>
 #include <map>
 #include <string>
-#include <omp.h>
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
 #include "distributions.h"
 #include "frames.h"
 

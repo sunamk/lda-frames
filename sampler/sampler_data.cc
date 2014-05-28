@@ -156,12 +156,14 @@ bool Sampler_t::loadData(string inputFileName) {
     cout << "Lexical units = " << U << endl;
     cout << "Slots = " << S << endl;
     cout << "Vocabulary size = " << V << endl;
-    if (cores < 0 || cores > (unsigned int) omp_get_max_threads()) {
-        cout << "Wrong number of cores (" << cores << "). It must be between 0 and "<<
-                omp_get_max_threads() << "." << endl;
-        return false;
-    }
-    cout << "cores = " << cores << endl;
+    #ifdef _OPENMP
+        if (cores < 0 || cores > (unsigned int) omp_get_max_threads()) {
+            cout << "Wrong number of cores (" << cores << "). It must be between 0 and "<<
+                    omp_get_max_threads() << "." << endl;
+            return false;
+        }
+        cout << "cores = " << cores << endl;
+    #endif
 
 
     return true;
@@ -387,7 +389,7 @@ bool Sampler_t::recoverParameters(string logDir) {
             }
             if (lineItems.at(0) == "Estimate number of frames:") {
                 unsigned int tmp = atoi(lineItems.at(1).c_str());
-                if (tmp < 0 || tmp > 1) {
+                if (tmp > 1) {
                     cout << "Wrong value of 'estimate number of frames' in the log file (" << lineItems.at(1) << ")." << endl;
                     return false;
                 }
@@ -402,7 +404,7 @@ bool Sampler_t::recoverParameters(string logDir) {
             }
             if (lineItems.at(0) == "Estimate number of roles:") {
                 unsigned int tmp = atoi(lineItems.at(1).c_str());
-                if (tmp < 0 || tmp > 1) {
+                if (tmp > 1) {
                     cout << "Wrong value of 'estimate number of roles' in the log file (" << lineItems.at(1) << ")." << endl;
                     return false;
                 }
