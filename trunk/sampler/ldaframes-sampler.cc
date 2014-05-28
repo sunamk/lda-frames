@@ -63,7 +63,9 @@ int main(int argc, char **argv) {
         ("gamma", po::value<float>(), "Gamma parameter.")
         ("delta", po::value<float>(), "Delta parameter.")
         ("seed", po::value<long int>(), "Random number generator seed (0 = current time).")
-        ("cores,C", po::value<unsigned int>(), "number of cores (default is 1, 0 = all available cores). This feature works only when a fixed number of frames and roles is given).")
+        #ifdef _OPENMP
+            ("cores,C", po::value<unsigned int>(), "number of cores (default is 1, 0 = all available cores). This feature works only when a fixed number of frames and roles is given).")
+        #endif
         ("reestimate_F","Reestimate number of frames automatically.")
         ("reestimate_R","Reestimate number of roles automatically.")
         ("no_hypers", "Do not estimate hyperparameters.")
@@ -178,10 +180,11 @@ int main(int argc, char **argv) {
     if (vm.count("seed")) {
         seed = vm["seed"].as<long int>();
     }
-    
-    if (vm.count("cores")) {
-        cores = vm["cores"].as<unsigned int>();
-    }
+    #ifdef _OPENMP 
+        if (vm.count("cores")) {
+            cores = vm["cores"].as<unsigned int>();
+        }
+    #endif
 
 
     Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, seed, reestimate_F, reestimate_R, cores, testPhase);
