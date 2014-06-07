@@ -65,9 +65,11 @@ public:
 
     bool recoverParameters(string logDir);
 
-    bool recoverData(string dataDir, unsigned int burn_in);
+    bool recoverData(string dataDir, unsigned int burn_in, bool no_hypers);
     
     double perplexity(bool test);
+
+    void dumpHypers(void);
     
     double bestPerplexity;
     unsigned int requiredIters;

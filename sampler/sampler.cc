@@ -640,6 +640,8 @@ void Sampler_t::sample(void) {
         cout << "tau..." << flush;
         resample_tau();
     }
+    
+    //dumpHypers();
 }
 
 bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int burn_in, bool allSamples,
@@ -907,11 +909,15 @@ double Sampler_t::perplexity(bool test) {
     } 
     double loglik = 0;
     int sum = 0;
+    
     double tau_sum = 0;
+    double alpha_sum = 0;
     for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
                     ++fit) {
-        tau_sum += tau[*fit];
+        tau_sum += alpha0*tau[*fit];
+        alpha_sum += alpha[*fit];
     }
+
     //#pragma omp parallel for
     for (unsigned int u=1; u<=U; ++u) {
         for (unsigned int t=1; t <= words->at(u-1).size(); ++t) {
@@ -919,18 +925,27 @@ double Sampler_t::perplexity(bool test) {
                 double loglik_tmp = 0;
                 for (set<unsigned int>::const_iterator fit = used_frames.begin(); fit != used_frames.end();
                         ++fit) {
-                    if (!checkPattern(roles[*fit-1], w[u-1][t-1]) || roles[*fit-1][s-1] == 0) continue;
+                    if (!checkPattern(roles[*fit-1], w[u-1][t-1]) || roles[*fit-1][s-1] == 0) {
+                         continue;
+                    }
 
-                    //loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta0)
+                    //loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta[words->at(u-1)[t-1][s-1]-1])
                     //              /
-                    //              (post_phi[u-1][F]*(post_theta[roles[*fit-1][s-1]-1][V] + V*beta0));
-                    loglik_tmp += post_phi[u-1][*fit-1]*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta[words->at(u-1)[t-1][s-1]-1])
-                                  /
-                                  (post_phi[u-1][F]*(post_theta[roles[*fit-1][s-1]-1][V] + beta[V]));
+                    //              (post_phi[u-1][F]*(post_theta[roles[*fit-1][s-1]-1][V] + beta[V]));
+                    if (infinite_F) {
+                        loglik_tmp += (alpha0*tau[*fit] + post_phi[u-1][*fit-1])*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta[words->at(u-1)[t-1][s-1]-1])
+                                      /
+                                      ((tau_sum + post_phi[u-1][F])*(post_theta[roles[*fit-1][s-1]-1][V] + beta[V]));
+                    } else {
+                        loglik_tmp += (alpha[*fit] + post_phi[u-1][*fit-1])*(post_theta[roles[*fit-1][s-1]-1][words->at(u-1)[t-1][s-1]-1] + beta[words->at(u-1)[t-1][s-1]-1])
+                                      /
+                                      ((alpha_sum + post_phi[u-1][F])*(post_theta[roles[*fit-1][s-1]-1][V] + beta[V]));
+
+                    }
+
 
                 }
-                #pragma omp critical
-                {
+                if (loglik_tmp !=0) {
                     loglik += BOUNDPROB(log(loglik_tmp));
                     sum++;
                 }
@@ -938,6 +953,37 @@ double Sampler_t::perplexity(bool test) {
         }
     }
     return exp(-loglik/sum);
+}
+
+void Sampler_t::dumpHypers(void) {
+    cout << "Alpha0: " << alpha0 << endl; 
+    cout << "Alpha:" << endl; 
+    for (vector<double>::const_iterator it = alpha.begin(); it != alpha.end(); ++it) {
+        cout << *it << " ";
+    }
+    cout << endl;
+    
+    cout << "Beta0: " << beta0 << endl; 
+    cout << "Beta:" << endl; 
+    for (vector<double>::const_iterator it = beta.begin(); it != beta.end(); ++it) {
+        cout << *it << " ";
+    }
+    cout << endl;
+    
+    cout << "Gamma0: " << gamma0 << endl; 
+    cout << "Gamma:" << endl; 
+    for (map<unsigned int, double>::const_iterator it = gamma.begin(); it != gamma.end(); ++it) {
+        cout << "(" << it->first << "," << it->second << ") ";
+    }
+    cout << endl;
+    
+    cout << "Delta: " << delta << endl; 
+    
+    cout << "Tau:" << endl; 
+    for (map<unsigned int, double>::const_iterator it = tau.begin(); it != tau.end(); ++it) {
+        cout << "(" << it->first << "," << it->second << ") ";
+    }
+    cout << endl;
 }
 
 

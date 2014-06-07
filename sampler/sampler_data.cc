@@ -464,7 +464,7 @@ bool Sampler_t::recoverParameters(string logDir) {
     return true;
 }
 
-bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
+bool Sampler_t::recoverData(string dataDir, unsigned int burn_in, bool no_hypers) {
     string ffname = dataDir + "frames.smpl";
     string rfname = dataDir + "roles.smpl";
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
@@ -604,20 +604,18 @@ bool Sampler_t::recoverData(string dataDir, unsigned int burn_in) {
         return false;
     }
 
-    cout << "...resampling phi and theta." << endl;
-
+    cout << "...computing phi and theta." << endl;
     initialize_beta(); 
     initialize_post_phi();
     resample_post_phi();
     initialize_post_theta();
     resample_post_theta();
-    initialize_post_omega();
     if (infinite_F) {
         initialize_infinite_vars();
         cout << "...resampling tau." << endl;
         resample_tau();
     }
-    if (startIter > burn_in) {
+    if (startIter > burn_in && !no_hypers) {
         cout << "...resampling hyperparameters." << endl;
         resample_hypers(20);
     }

@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
         }
         sampler.initialize(true);
         cout << "Recovering sampled data..." << endl;
-        if (!sampler.recoverData(outputDirectoryName, burn_in)) return 3;
+        if (!sampler.recoverData(outputDirectoryName, burn_in, no_hypers)) return 3;
         if (!no_perplexity) {
             cout << "Computing perplexity..." << endl;
             sampler.bestPerplexity = sampler.perplexity(false);
