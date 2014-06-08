@@ -226,6 +226,8 @@ int main(int argc, char **argv) {
 
     sampler.sampleAll(outputDirectoryName, iters, burn_in, allSamples, no_hypers, 
                       no_perplexity, remove_old_samples);
+
+    cerr << frames << "\t" << roles << "\t" << sampler.bestPerplexity << endl;
     
     if (printResult) {
         sampler.printFrames();

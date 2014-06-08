@@ -135,12 +135,12 @@ bool Sampler_t::loadData(string inputFileName) {
         if (reestimate_R) cout << " (will be reestimated)";
         cout << endl;
     }
-    
+    /* 
     if (F > maxFrames && !infinite_F && !infinite_R) {
         cout << "The number of frames (F) must be lower than or equal to the number of all " <<
                 "possible combinations of semantic roles (" << maxFrames << ")." << endl;
         return false;
-    }
+    }*/
     if (F < framePatterns.size() && !infinite_F) {
         cout << "Number of frames (F) must be higher or equal to the number of different " <<
                 "frame patterns in the input data (" << framePatterns.size() << ")." << endl;
