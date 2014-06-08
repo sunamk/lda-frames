@@ -918,8 +918,10 @@ double Sampler_t::perplexity(bool test) {
         alpha_sum += alpha[*fit];
     }
 
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (unsigned int u=1; u<=U; ++u) {
+        double loglik_local = 0;
+        int sum_local = 0;
         for (unsigned int t=1; t <= words->at(u-1).size(); ++t) {
             for (unsigned int s=1; s<=S; ++s) {
                 double loglik_tmp = 0;
@@ -946,10 +948,15 @@ double Sampler_t::perplexity(bool test) {
 
                 }
                 if (loglik_tmp !=0) {
-                    loglik += BOUNDPROB(log(loglik_tmp));
-                    sum++;
+                    loglik_local += BOUNDPROB(log(loglik_tmp));
+                    sum_local++;
                 }
             }
+        }
+        #pragma omp critical
+        {
+            loglik += loglik_local;
+            sum += sum_local;
         }
     }
     return exp(-loglik/sum);

@@ -29,14 +29,18 @@ int main(int argc, char **argv) {
     float delta = 1.0;
     bool testPhase = false;
     double train_perplexity, test_perplexity;
+    unsigned int cores = 1;
 
     po::options_description desc("Allowed options");
 
     desc.add_options()
         ("help,h", "Print this help message.")
         ("input-file", po::value<string>(), "Path to the input file.")
-        ("test-file,T", po::value<string>(), "Path to a test file. If the file is not provided, testing is skipped.")
         ("working-directory", po::value<string>(),"Path to the working directory." )
+        ("test-file,T", po::value<string>(), "Path to a test file. If the file is not provided, testing is skipped.")
+        #ifdef _OPENMP
+            ("cores,C", po::value<unsigned int>(), "number of cores (default is 1, 0 = all available cores). This feature works only when a fixed number of frames and roles is given).")
+        #endif
     ;
 
     po::positional_options_description p;
@@ -72,6 +76,11 @@ int main(int argc, char **argv) {
         testFileName = vm["test-file"].as<string>();
         testPhase = true;
     }
+    #ifdef _OPENMP
+        if (vm.count("cores")) {
+            cores = vm["cores"].as<unsigned int>();
+        }
+    #endif
 
     if (vm.count("working-directory"))
     {
@@ -83,7 +92,7 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, 0, false, false, 1, false);  
+    Sampler_t sampler(frames, roles, alpha, beta, gamma, delta, 0, false, false, cores, false);  
 
     cout << "Reading parameters from log..." << endl;
     if (!sampler.recoverParameters(outputDirectoryName)) return 3;
