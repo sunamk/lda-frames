@@ -42,7 +42,8 @@ from logger import DBG
 from logger import WARN
 from logger import INFO
 
-logger.setLogFile("/corpora/priprava_dat/xmaterna/semeval/generate_rels.log")
+#logger.setLogFile("/corpora/priprava_dat/xmaterna/semeval/generate_rels.log")
+logger.setLogFile("generate_rels.log")
 logger.setLevel(logging.DEBUG)
 
 class Worker:
