@@ -84,7 +84,7 @@ if __name__ == "__main__":
         for r in reals: dictionary.addRealisation(r)
         slots = map(lambda r: dictionary.real2id(r), reals)
         if len(slots) != len(relations):
-            print "Wrong number of slots in input data: '%s'." % line
+            print "Wrong number of slots in input data: '%s', line number: %d." % (line, progress+1)
             sys.exit(2)
         data[pid-1].append(slots)
 

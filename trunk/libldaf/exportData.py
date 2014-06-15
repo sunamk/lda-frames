@@ -37,6 +37,7 @@ if __name__ == "__main__":
     path  = args[0]
     output_path = path
     if not path.endswith("/"): path += "/"
+    if not output_path.endswith("/"): output_path += "/"
     if len(args) == 2:
         output_path = args[1]
         if not output_path.endswith("/"): output_path += "/"
