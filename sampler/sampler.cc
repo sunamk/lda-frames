@@ -703,7 +703,7 @@ bool Sampler_t::sampleAll(string outputDir, unsigned int iters, unsigned int bur
 
 
     for (unsigned int i = startIter; i < iters+1; ++i) {
-        cout << "Iteration no. " << i << ":";
+        cout << "Iteration #" << i << ":";
         cout << flush;
         if (i>burn_in && !no_hypers) {
             if(reestimate_F) infinite_F = true;
